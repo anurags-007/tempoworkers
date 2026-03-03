@@ -1,0 +1,93 @@
+{
+    "app_name": "Tempoworkers",
+    "nav_how_it_works": "How it works",
+    "nav_employer": "For Employers",
+    "nav_worker": "For Workers",
+    "sign_in": "Sign In",
+    "hero_badge": "Connecting Skills to Needs",
+    "hero_title": "Find Work. <1>Hire Talent.</1> <br/> Instantly.",
+    "hero_subtitle": "The smartest platform for daily wage workers and employers. Connect, hire, and get the job done with trust and transparency.",
+    "role_worker_title": "I am a Worker",
+    "role_worker_desc": "Find daily wage jobs nearby. Plumbers, Painters, Masons, & more.",
+    "role_worker_btn": "Find Work {{icon}}",
+    "role_employer_title": "I am an Employer",
+    "role_employer_desc": "Post jobs and hire skilled workers in your local area.",
+    "role_employer_btn": "Hire Workers {{icon}}",
+    "login_worker_portal": "Worker Portal",
+    "login_employer_portal": "Employer Portal",
+    "enter_mobile": "Enter your mobile to continue",
+    "verify_identity": "Verify your identity",
+    "get_otp": "Get OTP",
+    "verify_login": "Verify & Login",
+    "resend_otp": "Resend OTP",
+    "back_home": "Back to Home",
+    "dash_hello": "Hello {{name}}",
+    "dash_available": "Available for work",
+    "dash_jobs_nearby": "Jobs Near You",
+    "dash_search_placeholder": "Search jobs (e.g. Mason, Plumber)",
+    "dash_apply": "Apply Now",
+    "emp_dashboard": "Employer Dashboard",
+    "emp_post_job": "Post a Job",
+    "emp_active_jobs": "Active Jobs",
+    "emp_job_title": "JOB TITLE",
+    "emp_category": "Category",
+    "emp_wage": "Wage (₹/day)",
+    "emp_duration": "Duration",
+    "emp_location": "Job Location",
+    "emp_tap_map": "(Tap map to set)",
+    "emp_btn_post": "Post Job",
+    "how": {
+        "title_prefix": "How",
+        "title_suffix": "Works",
+        "subtitle": "Whether you're looking for work or looking to hire, we make the process simple, transparent, and fast.",
+        "btn_worker": "For Workers",
+        "btn_employer": "For Employers",
+        "cta_title": "Ready to get started?",
+        "worker": {
+            "step1": {
+                "title": "Create Your Profile",
+                "desc": "Sign up and list your skills to get noticed."
+            },
+            "step2": {
+                "title": "Find Jobs Nearby",
+                "desc": "Browse active job listings in your local area with real-time wages."
+            },
+            "step3": {
+                "title": "Apply & Get Hired",
+                "desc": "One-click apply. Get notified instantly when an employer accepts you."
+            },
+            "step4": {
+                "title": "Earn Money",
+                "desc": "Complete the job and get paid directly by the employer."
+            }
+        },
+        "employer": {
+            "step1": {
+                "title": "Post a Job",
+                "desc": "Describe your requirement: Role, Wage, Duration, and Location."
+            },
+            "step2": {
+                "title": "Review Applicants",
+                "desc": "See profiles of skilled workers who apply to your job."
+            },
+            "step3": {
+                "title": "Hire Instantly",
+                "desc": "Accept the best candidate. They get notified, and you get the work done."
+            }
+        }
+    },
+    "login": {
+        "error_mobile": "Please enter a valid 10-digit number",
+        "otp_sent": "OTP Sent Successfully!",
+        "otp_is": "Your OTP is:",
+        "error_send_otp": "Error sending OTP",
+        "error_otp_length": "Please enter a valid 4-digit OTP",
+        "success": "Login Successful!",
+        "error_invalid_otp": "Invalid OTP",
+        "label_mobile": "Mobile Number",
+        "label_otp": "One Time Password",
+        "change_number": "Change Number",
+        "resend_in": "Resend OTP in",
+        "terms": "By logging in, you agree to our Terms & Privacy Policy."
+    }
+}
