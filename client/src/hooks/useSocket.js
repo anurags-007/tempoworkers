@@ -40,6 +40,10 @@ const useSocket = (user) => {
             window.dispatchEvent(new CustomEvent('tw-notification', { detail: data }));
         });
 
+        socket.on('chat_message', (msg) => {
+            window.dispatchEvent(new CustomEvent('tw-chat-message', { detail: msg }));
+        });
+
         socket.on('disconnect', () => { });
 
         return () => {

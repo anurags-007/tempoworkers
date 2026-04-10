@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../api';
 import {
     LogOut, MapPin, Users, Plus, CheckCircle, Clock, X, ArrowLeft,
-    Briefcase, Building2, Star, Trophy, History
+    Briefcase, Building2, Star, Trophy, History, MessageSquare, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, Toaster } from 'react-hot-toast';
@@ -12,6 +12,7 @@ import GlassCard from '../components/ui/GlassCard';
 import GradientButton from '../components/ui/GradientButton';
 import SkeletonLoader from '../components/SkeletonLoader';
 import Confetti from '../components/Confetti';
+import ChatBox from '../components/ChatBox';
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1 } };
@@ -103,6 +104,7 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
     const [celebrate, setCelebrate] = useState(false);
     const confettiShown = useRef(false);
     const [notifBadge, setNotifBadge] = useState(0);
+    const [selectedChatApplication, setSelectedChatApplication] = useState(null);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -220,10 +222,88 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
     const markComplete = async (appId) => {
         try {
             await api.patch(`/applications/${appId}/complete`);
-            toast.success('Marked as complete! ✅');
+            
+            // Release Escrow Phase
+            try {
+                await api.post(`/payment/release/${appId}`);
+                toast.success('Escrow released and Job complete! 💸');
+            } catch (err) {
+                toast.success('Job Marked Complete! ✅'); // Fallback for non-escrow jobs
+            }
+            
             setApplicants(prev => prev.map(a => a._id === appId ? { ...a, status: 'completed', completedAt: new Date() } : a));
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to mark complete');
+        }
+    };
+
+    const loadRazorpayScript = () => {
+        return new Promise((resolve) => {
+            if (window.Razorpay) return resolve(true);
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
+    const handleHirePayment = async (appId) => {
+        setLoading(true);
+        try {
+            const resScript = await loadRazorpayScript();
+            if (!resScript) {
+                toast.error('Razorpay SDK failed to load. Are you online?');
+                return;
+            }
+
+            const result = await api.post('/payment/create-order', { applicationId: appId });
+            
+            const options = {
+                key: result.data.keyId,
+                amount: result.data.amount.toString(),
+                currency: result.data.currency,
+                name: "TempoWorkers",
+                description: "Escrow Payment for Worker",
+                order_id: result.data.orderId,
+                handler: async function (response) {
+                    try {
+                        const verifyRes = await api.post('/payment/verify', {
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            applicationId: appId
+                        });
+                        toast.success(verifyRes.data.message || 'Worker Hired Successfully! 🎉');
+                        
+                        setApplicants(applicants.map(app => app._id === appId ? { ...app, status: 'accepted' } : app));
+                        
+                        if (!confettiShown.current) {
+                            setCelebrate(true);
+                            confettiShown.current = true;
+                            setTimeout(() => setCelebrate(false), 5000);
+                        }
+                    } catch (err) {
+                        toast.error(err.response?.data?.message || 'Payment Verification Failed');
+                    }
+                },
+                prefill: {
+                    name: user.name,
+                    email: user.email,
+                    contact: user.mobile || ''
+                },
+                theme: {
+                    color: "#059669"
+                }
+            };
+            
+            const paymentObject = new window.Razorpay(options);
+            paymentObject.open();
+
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Error initializing payment');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -363,7 +443,13 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-3 shrink-0">
+                                                <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+                                                    <button 
+                                                        onClick={() => setSelectedChatApplication(app)}
+                                                        className="px-3 py-1.5 bg-brand-50 text-brand-700 rounded-xl font-bold text-xs hover:bg-brand-100 transition flex items-center gap-1.5 border border-brand-200"
+                                                    >
+                                                        <MessageSquare size={14} /> Message
+                                                    </button>
                                                     {app.status === 'pending' ? (
                                                         <>
                                                             <button
@@ -374,10 +460,10 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
                                                                 <X size={20} />
                                                             </button>
                                                             <GradientButton
-                                                                onClick={() => updateStatus(app._id, 'accepted')}
-                                                                className="!px-6 !py-2 !text-sm !from-green-600 !to-green-700 hover:!from-green-500 hover:!to-green-600"
+                                                                onClick={() => handleHirePayment(app._id)}
+                                                                className="!px-6 !py-2 !text-sm !from-brand-600 !to-brand-700 hover:!from-brand-500 hover:!to-brand-600 flex items-center gap-2"
                                                             >
-                                                                Hire Candidate ✓
+                                                                <Lock size={14} /> Pay & Hire
                                                             </GradientButton>
                                                         </>
                                                     ) : app.status === 'accepted' ? (
@@ -606,6 +692,14 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
                     )}
                 </AnimatePresence>
             </div>
+
+            {selectedChatApplication && (
+                <ChatBox 
+                    application={selectedChatApplication}
+                    currentUser={user}
+                    onClose={() => setSelectedChatApplication(null)}
+                />
+            )}
         </div>
     );
 };

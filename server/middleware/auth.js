@@ -15,13 +15,13 @@ if (process.env.JWT_SECRET) {
 }
 
 /**
- * Generate a signed JWT token for a user (7-day expiry)
+ * Generate a signed JWT token for a user (24-hour expiry)
  */
 const generateToken = (user) => {
     return jwt.sign(
-        { id: user._id, role: user.role },
+        { id: user._id, role: user.role, tokenVersion: user.tokenVersion || 0 },
         JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: '24h' }
     );
 };
 
@@ -41,6 +41,11 @@ const protect = async (req, res, next) => {
         const user = await User.findById(decoded.id).select('-password');
         if (!user) {
             return res.status(401).json({ message: 'Not authorized. User not found.' });
+        }
+
+        // Check if token version matches the user's current version (handles revocation)
+        if (decoded.tokenVersion !== user.tokenVersion) {
+            return res.status(401).json({ message: 'Session expired. Please login again.' });
         }
 
         req.user = user;

@@ -17,15 +17,15 @@ const Login = ({ setUser }) => {
 
     // Default auth modes based on role
     const isWorker = role === 'worker';
-    const [authMode, setAuthMode] = useState(isWorker ? 'otp' : 'password'); // 'otp' (Worker), 'password' (Employer), 'register' (Employer)
+    const [authMode, setAuthMode] = useState(role === 'worker' ? 'otp' : 'password');
 
-    // Worker Form State
-    const [mobile, setMobile] = useState('');
+    // OTP Auth State
+    const [identifier, setIdentifier] = useState('');
     const [otp, setOtp] = useState('');
-    const [step, setStep] = useState('mobile'); // 'mobile' or 'otp'
+    const [step, setStep] = useState('identifier'); // 'identifier' | 'otp'
     const [timer, setTimer] = useState(0);
 
-    // Employer Form State
+    // Password Auth State
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
@@ -41,25 +41,26 @@ const Login = ({ setUser }) => {
 
     // ===== Worker Flow (OTP) =====
     const handleSendOtp = async (e) => {
-        e.preventDefault();
-        if (mobile.length !== 10) {
-            toast.error(t('login.error_mobile', 'Please enter a valid 10-digit number'));
+        if (e && e.preventDefault) e.preventDefault();
+        
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+        const isMobile = /^[6-9]\d{9}$/.test(identifier);
+
+        if (!isEmail && !isMobile) {
+            toast.error(t('login.error_identifier', 'Please enter a valid 10-digit mobile number or email address'));
             return;
         }
+
         setLoading(true);
         try {
-            const res = await api.post('/auth/send-otp', { mobile });
-
-            if (res.data.otp && res.data.otp !== 'DB_ERROR') {
-                toast.success(
-                    <div className="flex flex-col">
-                        <span>{t('login.otp_sent', 'OTP Sent Successfully!')}</span>
-                        <span className="text-sm font-bold text-brand-600">Dev OTP: {res.data.otp}</span>
-                    </div>,
-                    { duration: 6000, icon: '📩' }
-                );
+            const res = await api.post('/auth/send-otp', { identifier });
+            
+            // Handle Fallback message dynamically
+            if (res.data.fallbackTriggered) {
+                toast(res.data.message, { icon: '🔄', duration: 6000 });
+                setIdentifier(res.data.fallbackIdentifier);
             } else {
-                toast.success(t('login.otp_sent', 'OTP Sent to your mobile via SMS!'), { icon: '📩' });
+                toast.success(res.data.message || t('login.otp_sent', 'OTP Sent successfully!'), { icon: '📩' });
             }
 
             setStep('otp');
@@ -80,7 +81,7 @@ const Login = ({ setUser }) => {
         }
         setLoading(true);
         try {
-            const res = await api.post('/auth/login', { mobile, otp, role });
+            const res = await api.post('/auth/login', { identifier, otp, role });
             finishLogin(res.data.user, res.data.token);
         } catch (error) {
             toast.error(error.response?.data?.message || t('login.error_invalid_otp', 'Invalid OTP'));
@@ -131,7 +132,6 @@ const Login = ({ setUser }) => {
         setUser(user);
         toast.success(t('login.success', 'Login Successful!'), { icon: '🚀' });
         setTimeout(() => {
-            // If profile is incomplete, redirect to setup
             if (!user.name) {
                 navigate('/profile-setup');
             } else {
@@ -192,22 +192,28 @@ const Login = ({ setUser }) => {
                             {/* OTP Flow */}
                             {authMode === 'otp' && (
                                 <motion.div key="otp" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} >
-                                    {step === 'mobile' ? (
+                                    {step === 'identifier' ? (
                                         <form onSubmit={handleSendOtp} className="space-y-5">
                                             <div>
-                                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Mobile Number</label>
+                                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Mobile or Email</label>
                                                 <div className="relative">
-                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">+91</span>
-                                                    <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 font-bold text-lg outline-none transition-all" placeholder="99999 99999" autoFocus />
+                                                    <input 
+                                                        type="text" 
+                                                        value={identifier} 
+                                                        onChange={(e) => setIdentifier(e.target.value)} 
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 font-bold text-lg outline-none transition-all" 
+                                                        placeholder="99999 99999 or email@domain.com" 
+                                                        autoFocus 
+                                                    />
                                                 </div>
                                             </div>
-                                            <GradientButton type="submit" disabled={loading || mobile.length < 10} className="w-full justify-center">
+                                            <GradientButton type="submit" disabled={loading || identifier.length < 5} className="w-full justify-center">
                                                 {loading ? <Loader2 className="animate-spin" /> : <>Get OTP <Send size={16} /></>}
                                             </GradientButton>
                                         </form>
                                     ) : (
                                         <form onSubmit={handleVerifyOtp} className="space-y-5">
-                                            <div className="flex justify-between items-center"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Enter OTP</label><button type="button" onClick={() => setStep('mobile')} className="text-xs font-bold text-brand-600 hover:underline">Change Number</button></div>
+                                            <div className="flex justify-between items-center"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Enter OTP</label><button type="button" onClick={() => setStep('identifier')} className="text-xs font-bold text-brand-600 hover:underline">Change details</button></div>
                                             <input type="text" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 4))} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 font-bold text-3xl text-center tracking-[1rem] outline-none transition-all" placeholder="••••" autoFocus />
                                             <div className="text-center text-sm font-medium">{timer > 0 ? <span className="text-slate-400">Resend in <span className="text-slate-900 font-bold">{timer}s</span></span> : <button type="button" onClick={handleSendOtp} className="text-brand-600 font-bold hover:underline">Resend OTP</button>}</div>
                                             <GradientButton type="submit" disabled={loading || otp.length < 4} className="w-full justify-center">{loading ? <Loader2 className="animate-spin" /> : <>Verify & Login <LogIn size={16} /></>}</GradientButton>
@@ -246,7 +252,9 @@ const Login = ({ setUser }) => {
                                     <form onSubmit={handleRegister} className="space-y-5">
                                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
                                             <ShieldCheck className="text-amber-500 shrink-0" size={18} />
-                                            <p className="text-xs text-amber-800 font-medium">Create an account to post jobs or manage applications securely.</p>
+                                            <p className="text-xs text-amber-800 font-medium">
+                                                {isWorker ? "Create an account to browse jobs and manage your applications securely." : "Create an account to post jobs or manage applications securely."}
+                                            </p>
                                         </div>
                                         <div>
                                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Email Address</label>

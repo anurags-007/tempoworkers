@@ -12,6 +12,7 @@ dotenv.config();
 connectDB();
 
 const app = express();
+app.set('trust proxy', 1); // Essential for rate limiting behind a reverse proxy (Vercel, Nginx)
 const httpServer = http.createServer(app);
 
 // ─── Socket.io ─────────────────────────────────────────────
@@ -123,6 +124,8 @@ app.use('/api/auth/send-otp', authRateLimit);
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', require('./routes/applicationRoutes'));
+app.use('/api/chat', require('./routes/chatRoutes'));
+app.use('/api/payment', require('./routes/paymentRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

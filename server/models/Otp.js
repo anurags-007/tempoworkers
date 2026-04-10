@@ -1,13 +1,17 @@
 const mongoose = require('mongoose');
 
 const otpSchema = new mongoose.Schema({
-    mobile: {
+    identifier: {
         type: String,
         required: true,
     },
     otp: {
         type: String,
         required: true,
+    },
+    failedAttempts: {
+        type: Number,
+        default: 0
     },
     createdAt: {
         type: Date,

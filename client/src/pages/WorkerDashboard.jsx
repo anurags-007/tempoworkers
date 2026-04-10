@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import {
     LogOut, MapPin, Clock, Search, CheckCircle, XCircle, Briefcase,
-    RefreshCw, Bookmark, BookmarkCheck, Filter, X, User, Star, History, Trophy
+    RefreshCw, Bookmark, BookmarkCheck, Filter, X, User, Star, History, Trophy, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, Toaster } from 'react-hot-toast';
@@ -13,8 +13,22 @@ import GlassCard from '../components/ui/GlassCard';
 import GradientButton from '../components/ui/GradientButton';
 import SkeletonLoader from '../components/SkeletonLoader';
 import Confetti from '../components/Confetti';
+import ChatBox from '../components/ChatBox';
 
 const CATEGORIES = ['All', 'Mason', 'Plumber', 'Electrician', 'Laborer', 'Carpenter', 'Painter', 'Welder', 'Helper'];
+
+const CITY_COORDS = {
+    'New Delhi': [77.2090, 28.6139],
+    'Mumbai': [72.8777, 19.0760],
+    'Bangalore': [77.5946, 12.9716],
+    'Chennai': [80.2707, 13.0827],
+    'Hyderabad': [78.4867, 17.3850],
+    'Kolkata': [88.3639, 22.5726],
+    'Pune': [73.8567, 18.5204],
+    'Ahmedabad': [72.5714, 23.0225],
+    'Jaipur': [75.7873, 26.9124],
+    'Surat': [72.8311, 21.1702],
+};
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
@@ -57,6 +71,9 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
     const [minWage, setMinWage] = useState('');
     const [maxWage, setMaxWage] = useState('');
     const [showFilters, setShowFilters] = useState(false);
+    const [selectedCity, setSelectedCity] = useState(user?.location?.city || 'New Delhi');
+    const [isGeoActive, setIsGeoActive] = useState(false);
+    const [selectedChatApplication, setSelectedChatApplication] = useState(null);
 
     useEffect(() => {
         if (activeTab === 'jobs') fetchJobs();
@@ -65,7 +82,7 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
         else if (activeTab === 'history') fetchHistory();
     }, [activeTab]);
 
-    const fetchJobs = async () => {
+    const fetchJobs = async (forceCity = null) => {
         setLoading(true);
         try {
             const params = new URLSearchParams({ radius: 50 });
@@ -74,20 +91,31 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
             if (maxWage) params.set('maxWage', maxWage);
             if (searchQuery) params.set('search', searchQuery);
 
-            const fetchFn = async (lat, lng) => {
+            const fetchByCoords = async (lat, lng) => {
                 params.set('lat', lat);
                 params.set('lng', lng);
                 const res = await api.get(`/jobs?${params.toString()}`);
                 setJobs(res.data);
             };
 
-            if (navigator.geolocation) {
+            const targetCity = forceCity || selectedCity;
+            const fallbackCoords = CITY_COORDS[targetCity] || CITY_COORDS['New Delhi'];
+
+            if (navigator.geolocation && !forceCity) {
                 navigator.geolocation.getCurrentPosition(
-                    pos => fetchFn(pos.coords.latitude, pos.coords.longitude).catch(() => fetchFn(28.6139, 77.2090)),
-                    () => fetchFn(28.6139, 77.2090)
+                    pos => {
+                        setIsGeoActive(true);
+                        fetchByCoords(pos.coords.latitude, pos.coords.longitude);
+                    },
+                    (err) => {
+                        console.warn('Geolocation failed:', err.message);
+                        setIsGeoActive(false);
+                        fetchByCoords(fallbackCoords[1], fallbackCoords[0]);
+                    }
                 );
             } else {
-                await fetchFn(28.6139, 77.2090);
+                setIsGeoActive(false);
+                fetchByCoords(fallbackCoords[1], fallbackCoords[0]);
             }
         } catch { toast.error('Failed to load jobs'); }
         finally { setLoading(false); }
@@ -284,6 +312,25 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
                                     </button>
                                 )}
                             </div>
+                            
+                            {/* City Selector Dropdown */}
+                            <div className="relative">
+                                <MapPin size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isGeoActive ? 'text-emerald-500' : 'text-slate-400'}`} />
+                                <select
+                                    value={selectedCity}
+                                    onChange={(e) => {
+                                        const newCity = e.target.value;
+                                        setSelectedCity(newCity);
+                                        fetchJobs(newCity);
+                                    }}
+                                    className="pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition text-slate-900 font-bold text-sm appearance-none shadow-sm"
+                                >
+                                    {Object.keys(CITY_COORDS).map(city => (
+                                        <option key={city} value={city}>{city}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <button
                                 onClick={() => setShowFilters(f => !f)}
                                 className={`px-4 py-3 rounded-xl border font-bold text-sm flex items-center gap-2 transition ${showFilters ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-400'}`}
@@ -368,6 +415,14 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
                                                 <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${app.status === 'accepted' ? 'bg-green-50 text-green-700 border-green-200' : app.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' : app.status === 'completed' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                                                     {app.status === 'accepted' ? <CheckCircle size={16} /> : app.status === 'rejected' ? <XCircle size={16} /> : app.status === 'completed' ? <Trophy size={16} /> : <Clock size={16} />}
                                                     <span className="capitalize">{app.status}</span>
+                                                </div>
+                                                <div className="flex justify-end sm:mt-0 w-full sm:w-auto">
+                                                    <button 
+                                                        onClick={() => setSelectedChatApplication(app)}
+                                                        className="px-4 py-2 bg-brand-50 text-brand-700 rounded-xl font-bold text-sm hover:bg-brand-100 transition flex items-center gap-2 border border-brand-200"
+                                                    >
+                                                        <MessageSquare size={16} /> Message
+                                                    </button>
                                                 </div>
                                             </GlassCard>
                                         </motion.div>
@@ -505,6 +560,14 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
                     )}
                 </AnimatePresence>
             </div>
+
+            {selectedChatApplication && (
+                <ChatBox 
+                    application={selectedChatApplication}
+                    currentUser={user}
+                    onClose={() => setSelectedChatApplication(null)}
+                />
+            )}
         </div>
     );
 };

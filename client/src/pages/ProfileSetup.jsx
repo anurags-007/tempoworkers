@@ -22,6 +22,7 @@ const ProfileSetup = ({ user, onSave }) => {
     const isWorker = user?.role === 'worker';
     const [form, setForm] = useState({
         name: user?.name || '',
+        email: user?.email || '',
         city: user?.location?.city || 'New Delhi',
         skills: user?.skills || [],
         baseRate: user?.baseRate || '',
@@ -59,6 +60,7 @@ const ProfileSetup = ({ user, onSave }) => {
                     coordinates: coords,
                     city: form.city,
                 },
+                ...(form.email ? { email: form.email.trim() } : {}),
                 ...(isWorker ? {
                     skills: form.skills,
                     baseRate: parseFloat(form.baseRate) || 0,
@@ -115,6 +117,23 @@ const ProfileSetup = ({ user, onSave }) => {
                                     required
                                 />
                             </div>
+
+                            {/* Worker: Optional Email Fallback */}
+                            {isWorker && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider flex items-center gap-1">
+                                        <User size={12} /> Email Fallback <span className="text-slate-400 normal-case font-normal">(optional)</span>
+                                    </label>
+                                    <p className="text-[10px] text-slate-400 mb-2">If SMS fails, we'll send your OTP here.</p>
+                                    <input
+                                        type="email"
+                                        placeholder="e.g. yourname@example.com"
+                                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition font-medium text-slate-900"
+                                        value={form.email}
+                                        onChange={e => setForm({ ...form, email: e.target.value })}
+                                    />
+                                </div>
+                            )}
 
                             {/* Employer: Company Name */}
                             {!isWorker && (

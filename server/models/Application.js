@@ -24,6 +24,11 @@ const applicationSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    paymentStatus: {
+        type: String,
+        enum: ['unpaid', 'escrow', 'released'],
+        default: 'unpaid'
+    }
 }, { timestamps: true });
 
 // Prevent duplicate applications

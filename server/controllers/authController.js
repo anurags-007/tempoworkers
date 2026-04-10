@@ -2,7 +2,31 @@ const { User, Worker, Employer } = require('../models/User');
 const Otp = require('../models/Otp');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 const { generateToken } = require('../middleware/auth');
+
+const sendEmailOtp = async (email, otp) => {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.warn('⚠️  EMAIL_USER or EMAIL_PASS not set in .env. Skipping actual email send.');
+        return false;
+    }
+    try {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+        });
+        await transporter.sendMail({
+            from: `"TempoWorkers" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'TempoWorkers - Your Login OTP',
+            html: `<p>Your OTP for login is <strong>${otp}</strong>. It expires in 5 minutes.</p>`
+        });
+        return true;
+    } catch (err) {
+        console.error('Email API Error:', err);
+        return false;
+    }
+};
 
 // ─── Password Strength Validator ─────────────────────────────
 // Min 8 chars, at least 1 digit or 1 special character
@@ -21,19 +45,33 @@ const sanitizeName = (name) => {
     return name.replace(/<[^>]*>/g, '').trim().slice(0, 80);
 };
 
+// ─── User Response Sanitizer (Prevents Data Leakage) ─────────
+const sanitizeUserResponse = (user) => {
+    const obj = user.toObject ? user.toObject() : { ...user };
+    delete obj.password;
+    delete obj.__v;
+    delete obj.tokenVersion;
+    delete obj.lastOtpSentAt;
+    return obj;
+};
+
 exports.sendOtp = async (req, res) => {
     if (mongoose.connection.readyState !== 1) {
         return res.status(500).json({ message: 'DATABASE_CONNECTION_FAILED' });
     }
 
-    const { mobile } = req.body;
-    if (!mobile) return res.status(400).json({ message: 'Mobile number is required' });
-    if (!/^[6-9]\d{9}$/.test(mobile)) {
-        return res.status(400).json({ message: 'Invalid mobile number. Must be a valid 10-digit Indian number.' });
+    const { identifier } = req.body;
+    if (!identifier) return res.status(400).json({ message: 'Mobile number or Email is required' });
+
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    const isMobile = /^[6-9]\d{9}$/.test(identifier);
+
+    if (!isEmail && !isMobile) {
+        return res.status(400).json({ message: 'Invalid identifier. Must be a valid email or 10-digit Indian mobile number.' });
     }
 
-    // ─── OTP Rate Limit: 60 seconds cooldown per mobile ───
-    const existing = await Otp.findOne({ mobile });
+    // ─── OTP Rate Limit: 60 seconds cooldown per identifier ───
+    const existing = await Otp.findOne({ identifier });
     if (existing) {
         const secondsSinceSent = (Date.now() - new Date(existing.createdAt).getTime()) / 1000;
         if (secondsSinceSent < 60) {
@@ -48,21 +86,27 @@ exports.sendOtp = async (req, res) => {
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
     try {
-        await Otp.deleteMany({ mobile });
-        await Otp.create({ mobile, otp });
+        await Otp.deleteMany({ identifier });
+        await Otp.create({ identifier, otp });
 
         // Log only in non-production
         if (process.env.NODE_ENV !== 'production') {
-            console.log(`[DEV] OTP for ${mobile}: ${otp}`);
+            console.log(`[DEV] OTP for ${identifier}: ${otp}`);
         }
 
-        if (process.env.SMS_API_KEY) {
+        let sentSuccess = false;
+        let deliveryMethod = '';
+
+        if (isEmail) {
+            sentSuccess = await sendEmailOtp(identifier, otp);
+            deliveryMethod = 'Email';
+        } else if (isMobile && process.env.SMS_API_KEY) {
             let smsSent = false;
             try {
                 const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
                     method: 'POST',
                     headers: { 'authorization': process.env.SMS_API_KEY, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ route: 'otp', variables_values: otp, numbers: mobile })
+                    body: JSON.stringify({ route: 'otp', variables_values: otp, numbers: identifier })
                 });
                 const data = await response.json();
                 if (data.return === true) smsSent = true;
@@ -71,16 +115,34 @@ exports.sendOtp = async (req, res) => {
                 console.error('Failed to send SMS:', smsError.message);
             }
 
-            if (smsSent) return res.json({ message: 'OTP sent to your mobile number via SMS.' });
-            // Do NOT reveal OTP in response — SMS failed silently
-            return res.json({ message: 'OTP generated. SMS delivery failed; contact support.' });
+            if (smsSent) {
+                sentSuccess = true;
+                deliveryMethod = 'SMS';
+            } else {
+                // SMS failed. Check if worker has an email to fallback to
+                const user = await User.findOne({ mobile: identifier });
+                if (user && user.email) {
+                    // Update the Otp document identifier to the email so verifyOtp works seamlessly
+                    await Otp.updateOne({ identifier }, { identifier: user.email });
+                    sentSuccess = await sendEmailOtp(user.email, otp);
+                    if (sentSuccess) {
+                        return res.json({ 
+                            message: 'SMS failed. OTP fallback sent to your registered Email address.', 
+                            fallbackTriggered: true,
+                            fallbackIdentifier: user.email 
+                        });
+                    }
+                }
+            }
         }
 
-        // Dev-mode: ONLY return OTP when not in production
+        if (sentSuccess) return res.json({ message: `OTP sent to your ${isEmail ? 'email address' : 'mobile number'}.` });
+
+        // Dev-mode: ONLY return OTP when not in production and sending failed (or not configured)
         if (process.env.NODE_ENV === 'production') {
-            return res.json({ message: 'OTP sent.' });
+            return res.json({ message: 'OTP generated. Delivery integration failed or not configured; contact support.' });
         }
-        res.json({ message: 'OTP generated (Dev Mode)', otp });
+        res.json({ message: `OTP generated (Dev Mode) for ${identifier}`, otp });
     } catch (error) {
         console.error('Error sending OTP:', error);
         res.status(500).json({ message: 'Failed to send OTP' });
@@ -88,30 +150,51 @@ exports.sendOtp = async (req, res) => {
 };
 
 exports.verifyOtp = async (req, res) => {
-    const { mobile, otp, role } = req.body;
+    const { identifier, otp, role } = req.body;
+    // Fallback support for older clients sending `mobile` instead of `identifier`
+    const targetIdentifier = identifier || req.body.mobile;
 
-    if (!mobile || !otp) {
-        return res.status(400).json({ message: 'Mobile number and OTP are required.' });
+    if (!targetIdentifier || !otp) {
+        return res.status(400).json({ message: 'Mobile number/Email and OTP are required.' });
     }
     if (!/^\d{4}$/.test(otp)) {
         return res.status(400).json({ message: 'OTP must be exactly 4 digits.' });
     }
 
     try {
-        const validOtp = await Otp.findOne({ mobile, otp });
-        if (!validOtp) return res.status(400).json({ message: 'Invalid or Expired OTP' });
+        const validOtp = await Otp.findOne({ identifier: targetIdentifier });
+        if (!validOtp) return res.status(400).json({ message: 'No OTP requested or expired.' });
+
+        if (validOtp.otp !== otp) {
+            validOtp.failedAttempts = (validOtp.failedAttempts || 0) + 1;
+            if (validOtp.failedAttempts >= 5) {
+                await Otp.deleteOne({ _id: validOtp._id });
+                return res.status(429).json({ message: 'Too many failed attempts. Please request a new OTP.' });
+            }
+            await validOtp.save();
+            return res.status(400).json({ message: 'Invalid OTP.' });
+        }
 
         await Otp.deleteOne({ _id: validOtp._id });
 
-        let user = await User.findOne({ mobile });
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetIdentifier);
+        
+        let user = await User.findOne(
+            isEmail ? { email: targetIdentifier } : { mobile: targetIdentifier }
+        );
+        
         if (!user) {
             if (!role) return res.status(400).json({ message: 'Role required for new user' });
-            user = role === 'worker' ? new Worker({ mobile, role }) : new Employer({ mobile, role });
+            if (isEmail) {
+                user = role === 'worker' ? new Worker({ email: targetIdentifier, role }) : new Employer({ email: targetIdentifier, role });
+            } else {
+                user = role === 'worker' ? new Worker({ mobile: targetIdentifier, role }) : new Employer({ mobile: targetIdentifier, role });
+            }
             await user.save();
         }
 
         const token = generateToken(user);
-        res.json({ message: 'Login successful', user, token });
+        res.json({ message: 'Login successful', user: sanitizeUserResponse(user), token });
     } catch (error) {
         console.error('Error verifying OTP:', error);
         res.status(500).json({ message: 'Login failed' });
@@ -126,13 +209,16 @@ exports.updateProfile = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized.' });
         }
 
-        const { name, location, skills, baseRate, companyName, isAvailable } = req.body;
+        const { name, location, skills, baseRate, companyName, isAvailable, email } = req.body;
 
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         if (name !== undefined) user.name = sanitizeName(name);
         if (location) user.location = location;
+        if (email !== undefined && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+             user.email = email;
+        }
 
         if (user.role === 'worker') {
             if (skills !== undefined) user.skills = skills;
@@ -144,7 +230,7 @@ exports.updateProfile = async (req, res) => {
         }
 
         await user.save();
-        res.json({ message: 'Profile updated', user });
+        res.json({ message: 'Profile updated', user: sanitizeUserResponse(user) });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -181,10 +267,9 @@ exports.register = async (req, res) => {
             : new Worker(opts);
 
         await newUser.save();
-        newUser.password = undefined;
 
         const token = generateToken(newUser);
-        res.status(201).json({ message: 'Registration successful', user: newUser, token });
+        res.status(201).json({ message: 'Registration successful', user: sanitizeUserResponse(newUser), token });
     } catch (error) {
         console.error('Registration Error:', error);
         res.status(500).json({ message: 'Registration failed.' });
@@ -215,9 +300,8 @@ exports.loginWithPassword = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(401).json({ message: 'Invalid credentials.' });
 
-        user.password = undefined;
         const token = generateToken(user);
-        res.json({ message: 'Login successful', user, token });
+        res.json({ message: 'Login successful', user: sanitizeUserResponse(user), token });
     } catch (error) {
         console.error('Password Login Error:', error);
         res.status(500).json({ message: 'Login failed.' });

@@ -33,6 +33,8 @@ const userSchema = new mongoose.Schema({
     },
     // OTP cooldown tracking
     lastOtpSentAt: { type: Date, default: null },
+    // Token Version for session revocation
+    tokenVersion: { type: Number, default: 0 },
 }, { timestamps: true, discriminatorKey: 'role' });
 
 userSchema.index({ location: '2dsphere' });
