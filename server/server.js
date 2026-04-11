@@ -57,6 +57,8 @@ app.use(cors({
             'https://anurags-007.github.io',
             'https://tempoworkers-client.vercel.app',
             'https://tempoworkers.vercel.app',
+            // ADD YOUR PRODUCTION DOMAIN HERE:
+            // 'https://your-domain.com',
         ];
         if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) || allowedOrigins.includes(origin)) {
             callback(null, true);
