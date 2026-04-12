@@ -46,6 +46,7 @@ const Worker = User.discriminator('worker', new mongoose.Schema({
     baseRate: { type: Number, default: 0 },
     isAvailable: { type: Boolean, default: true },
     bookmarkedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }],
+    razorpayAccountId: { type: String, default: null }, // Linked Account ID for Route payouts
     ratings: [{
         from: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         value: { type: Number, min: 1, max: 5 },

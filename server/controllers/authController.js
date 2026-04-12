@@ -3,6 +3,7 @@ const Otp = require('../models/Otp');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 const { generateToken } = require('../middleware/auth');
 
 const sendEmailOtp = async (email, otp) => {
@@ -83,7 +84,7 @@ exports.sendOtp = async (req, res) => {
         }
     }
 
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otp = crypto.randomInt(1000, 10000).toString();
 
     try {
         await Otp.deleteMany({ identifier });
@@ -215,7 +216,14 @@ exports.updateProfile = async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         if (name !== undefined) user.name = sanitizeName(name);
-        if (location) user.location = location;
+        if (location !== undefined) {
+            // Sanitize location if it's a string (city/address), otherwise keep as is for legacy object sync
+            if (typeof location === 'string') {
+                user.location = location.replace(/<[^>]*>/g, '').trim().slice(0, 100);
+            } else {
+                user.location = location;
+            }
+        }
         if (email !== undefined && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
              user.email = email;
         }

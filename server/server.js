@@ -1,14 +1,12 @@
+require('dotenv').config();
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const jobRoutes = require('./routes/jobRoutes');
 const { protect } = require('./middleware/auth');
-
-dotenv.config();
 connectDB();
 
 const app = express();
@@ -16,11 +14,29 @@ app.set('trust proxy', 1); // Essential for rate limiting behind a reverse proxy
 const httpServer = http.createServer(app);
 
 // ─── Socket.io ─────────────────────────────────────────────
+const allowedOrigins = [
+    'https://client-r8vyry1zh-anurags-007s-projects.vercel.app',
+    'https://clientt-ten-orpin.vercel.app',
+    'https://client-ten-orpin.vercel.app',
+    'https://anurags-tempoworkers-client.netlify.app',
+    'https://anurags-007.github.io',
+    'https://tempoworkers-client.vercel.app',
+    'https://tempoworkers.vercel.app',
+];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS not allowed for: ' + origin));
+        }
+    },
+    credentials: true
+};
+
 const io = new Server(httpServer, {
-    cors: {
-        origin: (origin, cb) => cb(null, true),
-        methods: ['GET', 'POST']
-    }
+    cors: corsOptions
 });
 
 io.on('connection', (socket) => {

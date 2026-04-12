@@ -68,9 +68,13 @@ exports.createOrder = async (req, res) => {
 exports.verifyPayment = async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, applicationId } = req.body;
+        const employerId = req.user._id;
 
-        const payment = await Payment.findOne({ razorpay_order_id });
-        if (!payment) return res.status(404).json({ message: 'Payment record not found' });
+        // SECURITY FIX: Bind payment to the authenticated employer (IDOR Protection)
+        const payment = await Payment.findOne({ razorpay_order_id, employer: employerId });
+        if (!payment) {
+            return res.status(404).json({ message: 'Payment record not found for this employer.' });
+        }
 
         const bodyText = razorpay_order_id + "|" + razorpay_payment_id;
         
@@ -109,7 +113,7 @@ exports.releaseEscrow = async (req, res) => {
         const { applicationId } = req.params;
         const employerId = req.user._id;
 
-        const application = await Application.findById(applicationId).populate('job');
+        const application = await Application.findById(applicationId).populate('job worker');
         if (!application) return res.status(404).json({ message: 'Application not found' });
         
         if (application.job.employer.toString() !== employerId.toString()) {
@@ -124,17 +128,52 @@ exports.releaseEscrow = async (req, res) => {
             return res.status(400).json({ message: 'No funds in escrow for this application' });
         }
 
-        // Technically here you would utilize Razorpay Route API or simply simulate the payout.
-        application.paymentStatus = 'released';
-        await application.save();
-
         const payment = await Payment.findOne({ application: applicationId, status: 'escrow' });
-        if (payment) {
-            payment.status = 'released';
-            await payment.save();
+        if (!payment) return res.status(404).json({ message: 'Escrow payment record not found' });
+
+        // ─── RAZORPAY ROUTE TRANSFER ───
+        // In production, we transfer the funds to the worker's Linked Account ID.
+        // The worker must have 'razorpayAccountId' set on their profile.
+        
+        const worker = application.worker;
+        if (!worker.razorpayAccountId) {
+            return res.status(400).json({ 
+                message: 'Worker has not linked their bank account (razorpayAccountId missing). Funds remain in escrow.' 
+            });
         }
 
-        res.json({ message: 'Funds released to worker successfully! ✅' });
+        try {
+            const razorpay = getRazorpayInstance();
+            // Amount is in paise
+            const amountInPaise = payment.amount * 100;
+
+            const transfer = await razorpay.transfers.create({
+                account: worker.razorpayAccountId,
+                amount: amountInPaise,
+                currency: 'INR',
+                notes: {
+                    applicationId: applicationId,
+                    jobTitle: application.job.title
+                }
+            });
+
+            console.log(`[Razorpay] Transfer created: ${transfer.id}`);
+
+            application.paymentStatus = 'released';
+            await application.save();
+
+            payment.status = 'released';
+            payment.razorpay_transfer_id = transfer.id;
+            await payment.save();
+
+            res.json({ message: 'Funds released and transferred to worker successfully! ✅', transferId: transfer.id });
+        } catch (rzpError) {
+            console.error('Razorpay Transfer API Error:', rzpError);
+            return res.status(502).json({ 
+                message: 'Razorpay transfer failed. Please ensure your account has enough balance and the worker id is valid.',
+                error: rzpError.message
+            });
+        }
     } catch (error) {
         console.error('Release Escrow Error:', error);
         res.status(500).json({ message: 'Failed to release funds' });
