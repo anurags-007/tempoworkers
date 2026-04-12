@@ -145,6 +145,11 @@ app.use('/api/applications', require('./routes/applicationRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
 
+// ─── Health Check ────────────────────────────────────────────
+app.get('/', (req, res) => {
+    res.json({ status: 'ok', message: 'Tempoworkers API is running', timestamp: new Date().toISOString() });
+});
+
 const PORT = process.env.PORT || 5000;
 
 if (require.main === module) {
