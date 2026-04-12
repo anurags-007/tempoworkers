@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: tempoworkers-backend
+    env: node
+    rootDir: server
+    plan: free # Change to 'starter' for more memory
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        fromContext: production
+      - key: MONGO_URI
+        sync: false # Set in Render Dashboard
+      - key: JWT_SECRET
+        sync: false # Set in Render Dashboard
+      - key: RAZORPAY_KEY_ID
+        sync: false # Set in Render Dashboard
+      - key: RAZORPAY_KEY_SECRET
+        sync: false # Set in Render Dashboard
+      - key: EMAIL_USER
+        sync: false # Set in Render Dashboard
+      - key: EMAIL_PASS
+        sync: false # Set in Render Dashboard
+      - key: SMS_API_KEY
+        sync: false # Set in Render Dashboard
