@@ -151,6 +151,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', require('./routes/applicationRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
+app.use('/api/push', require('./routes/pushRoutes'));
 
 // ─── Health Check ────────────────────────────────────────────
 app.get('/', (req, res) => {

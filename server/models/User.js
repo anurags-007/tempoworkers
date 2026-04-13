@@ -35,6 +35,15 @@ const userSchema = new mongoose.Schema({
     lastOtpSentAt: { type: Date, default: null },
     // Token Version for session revocation
     tokenVersion: { type: Number, default: 0 },
+    // Push Notifications
+    pushSubscriptions: [{
+        endpoint: String,
+        expirationTime: Number,
+        keys: {
+            p256dh: String,
+            auth: String
+        }
+    }],
 }, { timestamps: true, discriminatorKey: 'role' });
 
 userSchema.index({ location: '2dsphere' });

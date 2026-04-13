@@ -5,6 +5,7 @@ import { Menu, X, LogIn, LayoutDashboard } from 'lucide-react';
 import Logo from './Logo';
 import LanguageSwitcher from './LanguageSwitcher';
 import GradientButton from './ui/GradientButton';
+import PushNotificationManager from './PushNotificationManager';
 
 const Navbar = () => {
     const { t } = useTranslation();
@@ -59,7 +60,8 @@ const Navbar = () => {
                             {link.name}
                         </Link>
                     ))}
-                    <div className="h-4 w-px bg-slate-200"></div>
+                    <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
+                    <PushNotificationManager />
                     <LanguageSwitcher />
 
                     {/* Show Dashboard button if logged in, else Sign In */}
