@@ -12,9 +12,10 @@ const validateObjectId = (id, res, label = 'ID') => {
     return true;
 };
 
+const { getCache, setCache, generateCacheKey, invalidateCachePattern } = require('../utils/cacheService');
+
 exports.createJob = async (req, res) => {
     try {
-        // SECURITY: always use JWT-authenticated employer ID, never req.body.employer
         const employerId = req.user._id;
         const { title, category, wage, payType, duration, location } = req.body;
         if (!title || !category || !wage || !duration || !location) {
@@ -23,10 +24,8 @@ exports.createJob = async (req, res) => {
         const job = new Job({ title, category, wage, payType: payType || 'Daily', duration, employer: employerId, location });
         await job.save();
 
-        // Track jobsPosted count on employer
         await User.findByIdAndUpdate(employerId, { $inc: { jobsPosted: 1 } });
 
-        // Notify connected clients about new job in the area
         const io = req.app.get('io');
         if (io) {
             io.emit('notification', {
@@ -38,6 +37,9 @@ exports.createJob = async (req, res) => {
             });
         }
 
+        // Invalidate jobs cache
+        await invalidateCachePattern('jobs:*');
+
         res.status(201).json(job);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -46,37 +48,41 @@ exports.createJob = async (req, res) => {
 
 exports.getJobs = async (req, res) => {
     const { lat, lng, radius = 50, category, minWage, maxWage, search } = req.query;
+    const workerId = req.user?._id;
+
+    const cacheKey = generateCacheKey(`jobs:${workerId || 'guest'}`, req.query);
 
     try {
+        const cachedJobs = await getCache(cacheKey);
+        if (cachedJobs) {
+            console.log('🚀 Serving jobs from cache');
+            return res.json(cachedJobs);
+        }
+
         let query = { status: 'open' };
 
-        // Geo filter
         if (lat && lng) {
             const parsedLat = parseFloat(lat);
             const parsedLng = parseFloat(lng);
             const parsedRadius = parseFloat(radius);
-            if (isNaN(parsedLat) || isNaN(parsedLng) || isNaN(parsedRadius)) {
-                return res.status(400).json({ message: 'Invalid geo coordinates.' });
+            if (!isNaN(parsedLat) && !isNaN(parsedLng) && !isNaN(parsedRadius)) {
+                query.location = {
+                    $near: {
+                        $geometry: { type: 'Point', coordinates: [parsedLng, parsedLat] },
+                        $maxDistance: parsedRadius * 1000,
+                    },
+                };
             }
-            query.location = {
-                $near: {
-                    $geometry: { type: 'Point', coordinates: [parsedLng, parsedLat] },
-                    $maxDistance: parsedRadius * 1000,
-                },
-            };
         }
 
-        // Category filter
         if (category && category !== 'All') query.category = category;
 
-        // Wage range filter
         if (minWage || maxWage) {
             query.wage = {};
             if (minWage) query.wage.$gte = parseFloat(minWage);
             if (maxWage) query.wage.$lte = parseFloat(maxWage);
         }
 
-        // Text search on title (escape special regex chars from user input)
         if (search) {
             const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             query.title = { $regex: escapedSearch, $options: 'i' };
@@ -86,23 +92,22 @@ exports.getJobs = async (req, res) => {
             .populate('employer', 'name email mobile companyName')
             .sort({ createdAt: -1 });
 
-        // If worker is logged in via JWT, attach hasApplied + isBookmarked per job
-        const workerId = req.user?._id;
+        let result = jobs;
         if (workerId) {
             const applications = await Application.find({ worker: workerId }, 'job');
             const appliedJobIds = new Set(applications.map(a => a.job.toString()));
             const workerUser = await User.findById(workerId, 'bookmarkedJobs');
             const bookmarkedSet = new Set((workerUser?.bookmarkedJobs || []).map(id => id.toString()));
 
-            const enriched = jobs.map(j => ({
+            result = jobs.map(j => ({
                 ...j.toObject(),
                 hasApplied: appliedJobIds.has(j._id.toString()),
                 isBookmarked: bookmarkedSet.has(j._id.toString()),
             }));
-            return res.json(enriched);
         }
 
-        res.json(jobs);
+        await setCache(cacheKey, result, 300);
+        res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

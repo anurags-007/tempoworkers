@@ -7,6 +7,7 @@ import ProfileSetup from "./pages/ProfileSetup";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
 import HowItWorks from "./pages/HowItWorks";
+import AdminDashboard from "./pages/AdminDashboard";
 import useSocket from "./hooks/useSocket";
 
 const App = () => {
@@ -70,6 +71,15 @@ const App = () => {
         element={
           <ProtectedRoute user={user} role="employer">
             <EmployerDashboard user={user} setUser={setUser} onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute user={user} role="admin">
+            <AdminDashboard user={user} onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />

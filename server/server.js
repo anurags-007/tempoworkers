@@ -35,9 +35,19 @@ const corsOptions = {
     credentials: true
 };
 
+const { createAdapter } = require('@socket.io/redis-adapter');
+const { pubClient, subClient } = require('./config/redis');
+
 const io = new Server(httpServer, {
     cors: corsOptions
 });
+
+// ─── WebSocket Scaling via Redis ─────────────────────────────
+if (pubClient && subClient) {
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log('📶 Socket.io Redis adapter enabled');
+}
+// ─────────────────────────────────────────────────────────────
 
 io.on('connection', (socket) => {
     socket.on('join', (userId) => {
@@ -152,6 +162,7 @@ app.use('/api/applications', require('./routes/applicationRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
 app.use('/api/push', require('./routes/pushRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 // ─── Health Check ────────────────────────────────────────────
 app.get('/', (req, res) => {

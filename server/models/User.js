@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['employer', 'worker'],
+        enum: ['employer', 'worker', 'admin'],
         required: true,
     },
     // Common fields
