@@ -26,7 +26,7 @@ const allowedOrigins = [
 
 const corsOptions = {
     origin: (origin, callback) => {
-        if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) || allowedOrigins.includes(origin)) {
+        if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) || allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin) || /\.netlify\.app$/.test(origin) || /\.onrender\.com$/.test(origin)) {
             callback(null, true);
         } else {
             callback(new Error('CORS not allowed for: ' + origin));
@@ -76,7 +76,7 @@ app.use(cors({
             // ADD YOUR PRODUCTION DOMAIN HERE:
             // 'https://your-domain.com',
         ];
-        if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) || allowedOrigins.includes(origin)) {
+        if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) || allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin) || /\.netlify\.app$/.test(origin) || /\.onrender\.com$/.test(origin)) {
             callback(null, true);
         } else {
             callback(new Error('CORS not allowed for: ' + origin));

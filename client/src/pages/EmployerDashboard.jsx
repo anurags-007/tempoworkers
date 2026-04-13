@@ -5,6 +5,7 @@ import {
     Briefcase, Building2, Star, Trophy, History, MessageSquare, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ChatBox from '../components/ChatBox';
 import { toast, Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
@@ -12,7 +13,6 @@ import GlassCard from '../components/ui/GlassCard';
 import GradientButton from '../components/ui/GradientButton';
 import SkeletonLoader from '../components/SkeletonLoader';
 import Confetti from '../components/Confetti';
-import ChatBox from '../components/ChatBox';
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1 } };
@@ -110,6 +110,7 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
         title: '',
         category: 'Mason',
         wage: '',
+        payType: 'Daily',
         duration: '',
         city: 'New Delhi'
     });
@@ -184,11 +185,12 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
                 title: formData.title,
                 category: formData.category,
                 wage: formData.wage,
+                payType: formData.payType,
                 duration: formData.duration,
                 location: { type: 'Point', coordinates: coords, city: formData.city }
             });
             toast.success(t('job_posted_success', 'Job Posted Successfully! 📢'));
-            setFormData({ title: '', category: 'Mason', wage: '', duration: '', city: 'New Delhi' });
+            setFormData({ title: '', category: 'Mason', wage: '', payType: 'Daily', duration: '', city: 'New Delhi' });
             setActiveTab('jobs');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Error posting job');
@@ -430,8 +432,12 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
                                                         <h3 className="font-bold text-slate-900 text-lg">{app.worker?.name || 'Worker'}</h3>
                                                         <p className="text-sm text-slate-500 mb-1">Mobile: {app.worker?.mobile || '—'}</p>
                                                         <p className="text-xs text-slate-400">Applied: {new Date(app.createdAt).toLocaleDateString('en-IN')}</p>
-                                                        {app.worker?.baseRate > 0 && (
-                                                            <p className="text-xs text-emerald-600 font-bold mt-0.5">Base rate: ₹{app.worker.baseRate}/day</p>
+                                                        {(app.worker?.dailyRate > 0 || app.worker?.hourlyRate > 0) && (
+                                                            <p className="text-xs text-emerald-600 font-bold mt-0.5">
+                                                                Rates: {app.worker?.dailyRate ? `₹${app.worker.dailyRate}/day` : ''} 
+                                                                {app.worker?.dailyRate && app.worker?.hourlyRate ? ' | ' : ''}
+                                                                {app.worker?.hourlyRate ? `₹${app.worker.hourlyRate}/hr` : ''}
+                                                            </p>
                                                         )}
                                                         <div className="flex gap-1.5 flex-wrap mt-1.5">
                                                             {app.worker?.skills?.map((skill, i) => (
@@ -443,12 +449,12 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+                                                <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end mt-4 md:mt-0 w-full md:w-auto">
                                                     <button 
                                                         onClick={() => setSelectedChatApplication(app)}
-                                                        className="px-3 py-1.5 bg-brand-50 text-brand-700 rounded-xl font-bold text-xs hover:bg-brand-100 transition flex items-center gap-1.5 border border-brand-200"
+                                                        className="flex-1 md:flex-none px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 shadow-md shadow-blue-200 transition flex items-center justify-center gap-2"
                                                     >
-                                                        <MessageSquare size={14} /> Message
+                                                        <MessageSquare size={16} /> Chat
                                                     </button>
                                                     {app.status === 'pending' ? (
                                                         <>
@@ -537,18 +543,32 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 mb-2 ml-1 uppercase tracking-wider">{t('emp_wage', 'Daily Wage')}</label>
-                                            <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                                                <input
-                                                    type="number"
-                                                    placeholder="500"
-                                                    min="100"
-                                                    className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition font-medium text-slate-800"
-                                                    value={formData.wage}
-                                                    onChange={e => setFormData({ ...formData, wage: e.target.value })}
-                                                    required
-                                                />
+                                            <label className="block text-xs font-bold text-slate-500 mb-2 ml-1 uppercase tracking-wider">{t('emp_wage', 'Pay Rate')}</label>
+                                            <div className="flex gap-2">
+                                                <div className="relative flex-1">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="500"
+                                                        min="50"
+                                                        className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition font-medium text-slate-800"
+                                                        value={formData.wage}
+                                                        onChange={e => setFormData({ ...formData, wage: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="relative w-28 shrink-0">
+                                                    <select
+                                                        className="w-full h-full pl-3 pr-8 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition appearance-none font-bold text-slate-700 text-sm"
+                                                        value={formData.payType}
+                                                        onChange={e => setFormData({ ...formData, payType: e.target.value })}
+                                                    >
+                                                        <option value="Daily">/ Day</option>
+                                                        <option value="Hourly">/ Hour</option>
+                                                        <option value="Fixed">Fixed</option>
+                                                    </select>
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">▼</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -612,7 +632,7 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
                                                     <h3 className="font-bold text-slate-900 text-lg">{app.job?.title}</h3>
                                                     <div className="flex gap-3 flex-wrap mt-1 text-sm text-slate-500">
                                                         <span>Worker: <span className="font-bold text-slate-700">{app.worker?.name || app.worker?.mobile || '—'}</span></span>
-                                                        <span>₹{app.job?.wage}/day</span>
+                                                        <span>₹{app.job?.wage}/{app.job?.payType === 'Hourly' ? 'hr' : app.job?.payType === 'Fixed' ? 'tot' : 'day'}</span>
                                                         <span>{app.job?.category}</span>
                                                     </div>
                                                     <p className="text-xs text-slate-400 mt-1">
@@ -647,11 +667,11 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
                                     <motion.div variants={container} initial="hidden" animate="show" className="grid gap-6 md:grid-cols-2">
                                         {myJobs.map((job) => (
                                             <motion.div key={job._id} variants={item}>
-                                                <GlassCard className="h-full flex flex-col hover:border-brand-300/50 hover:shadow-lg transition-all duration-300 group p-6">
+                                                <GlassCard className="h-full flex flex-col hover:border-brand-400 hover:shadow-premium transition-all duration-500 group p-6 bg-white/80">
                                                     <div className="flex justify-between items-start mb-3">
                                                         <h3 className="font-bold text-xl text-slate-900 leading-snug group-hover:text-brand-700 transition">{job.title}</h3>
-                                                        <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-lg text-sm shadow-sm border border-green-200">
-                                                            ₹{job.wage}/day
+                                                        <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-lg text-sm shadow-sm border border-green-200 shrink-0">
+                                                            ₹{job.wage}/{job.payType === 'Hourly' ? 'hr' : job.payType === 'Fixed' ? 'tot' : 'day'}
                                                         </span>
                                                     </div>
 

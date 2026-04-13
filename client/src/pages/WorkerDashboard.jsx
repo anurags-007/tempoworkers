@@ -276,7 +276,7 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
                 </div>
 
                 {/* Tabs */}
-                <GlassCard className="!p-1 !rounded-2xl flex gap-1 bg-white/50 backdrop-blur-md border-white/40 mb-6">
+                <GlassCard className="!p-1.5 !rounded-2xl flex gap-1 bg-white/60 backdrop-blur-xl border-white/50 mb-6 shadow-premium">
                     {tabs.map(tab => (
                         <button
                             key={tab.key}
@@ -408,7 +408,7 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
                                                     <h3 className="font-bold text-slate-900 text-lg">{app.job?.title}</h3>
                                                     <div className="flex items-center gap-4 mt-1 text-sm text-slate-500 font-medium">
                                                         <span className="flex items-center gap-1"><MapPin size={13} /> {app.job?.location?.city || 'India'}</span>
-                                                        <span>₹{app.job?.wage}/day</span>
+                                                        <span>₹{app.job?.wage}/{app.job?.payType === 'Hourly' ? 'hr' : app.job?.payType === 'Fixed' ? 'tot' : 'day'}</span>
                                                     </div>
                                                     <p className="text-xs text-slate-400 mt-2">Applied: {new Date(app.createdAt).toLocaleDateString('en-IN')}</p>
                                                 </div>
@@ -419,9 +419,9 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
                                                 <div className="flex justify-end sm:mt-0 w-full sm:w-auto">
                                                     <button 
                                                         onClick={() => setSelectedChatApplication(app)}
-                                                        className="px-4 py-2 bg-brand-50 text-brand-700 rounded-xl font-bold text-sm hover:bg-brand-100 transition flex items-center gap-2 border border-brand-200"
+                                                        className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-md shadow-blue-200 w-full sm:w-auto"
                                                     >
-                                                        <MessageSquare size={16} /> Message
+                                                        <MessageSquare size={16} /> Chat
                                                     </button>
                                                 </div>
                                             </GlassCard>
@@ -451,12 +451,12 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
                                         const rating = app.job?.employer?._id && user.ratings?.find(r => r.from?.toString() === app.job?.employer?._id?.toString());
                                         return (
                                             <motion.div key={app._id} variants={item}>
-                                                <GlassCard className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5">
+                                                <GlassCard className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 bg-white/80 hover:shadow-premium transition-all duration-300">
                                                     <div className="flex-1">
                                                         <h3 className="font-bold text-slate-900 text-lg">{app.job?.title}</h3>
                                                         <div className="flex items-center gap-4 mt-1 text-sm text-slate-500 font-medium flex-wrap">
                                                             <span>Employer: {app.job?.employer?.companyName || app.job?.employer?.name || '—'}</span>
-                                                            <span>₹{app.job?.wage}/day</span>
+                                                            <span>₹{app.job?.wage}/{app.job?.payType === 'Hourly' ? 'hr' : app.job?.payType === 'Fixed' ? 'tot' : 'day'}</span>
                                                             <span>{app.job?.category}</span>
                                                         </div>
                                                         <p className="text-xs text-slate-400 mt-1.5">
@@ -504,7 +504,7 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
                                 <motion.div variants={container} initial="hidden" animate="show" className="grid gap-5 md:grid-cols-2">
                                     {displayJobs.map(job => (
                                         <motion.div key={job._id} variants={item}>
-                                            <GlassCard className="h-full flex flex-col hover:shadow-xl hover:border-emerald-300/50 transition-all duration-300 group p-5">
+                                            <GlassCard className="h-full flex flex-col hover:shadow-premium hover:border-emerald-400 transition-all duration-500 group p-6 bg-white/80">
                                                 <div className="flex justify-between items-start mb-3">
                                                     <div className="flex-1 pr-2">
                                                         <h3 className="font-bold text-slate-900 text-lg leading-snug group-hover:text-emerald-700 transition">{job.title}</h3>
@@ -512,7 +512,7 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
                                                     </div>
                                                     <div className="text-right shrink-0">
                                                         <div className="font-bold text-emerald-600 text-lg">₹{job.wage}</div>
-                                                        <div className="text-xs text-slate-400 font-medium">/day</div>
+                                                        <div className="text-xs text-slate-400 font-medium">/{job.payType === 'Hourly' ? 'hr' : job.payType === 'Fixed' ? 'tot' : 'day'}</div>
                                                     </div>
                                                 </div>
 

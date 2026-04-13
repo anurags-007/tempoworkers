@@ -16,15 +16,27 @@ exports.createJob = async (req, res) => {
     try {
         // SECURITY: always use JWT-authenticated employer ID, never req.body.employer
         const employerId = req.user._id;
-        const { title, category, wage, duration, location } = req.body;
+        const { title, category, wage, payType, duration, location } = req.body;
         if (!title || !category || !wage || !duration || !location) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
-        const job = new Job({ title, category, wage, duration, employer: employerId, location });
+        const job = new Job({ title, category, wage, payType: payType || 'Daily', duration, employer: employerId, location });
         await job.save();
 
         // Track jobsPosted count on employer
         await User.findByIdAndUpdate(employerId, { $inc: { jobsPosted: 1 } });
+
+        // Notify connected clients about new job in the area
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('notification', {
+                type: 'job_posted',
+                title: '🏢 New Job Posted!',
+                message: `A new ${category} role is available! (${title})`,
+                jobId: job._id,
+                timestamp: new Date(),
+            });
+        }
 
         res.status(201).json(job);
     } catch (error) {

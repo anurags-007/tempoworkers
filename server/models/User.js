@@ -43,7 +43,8 @@ const User = mongoose.model('User', userSchema);
 
 const Worker = User.discriminator('worker', new mongoose.Schema({
     skills: [{ type: String }], // e.g., 'Mason', 'Plumber'
-    baseRate: { type: Number, default: 0 },
+    hourlyRate: { type: Number, default: 0 },
+    dailyRate: { type: Number, default: 0 },
     isAvailable: { type: Boolean, default: true },
     bookmarkedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }],
     razorpayAccountId: { type: String, default: null }, // Linked Account ID for Route payouts

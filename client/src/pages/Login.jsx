@@ -12,12 +12,13 @@ import Logo from '../components/Logo';
 const Login = ({ setUser }) => {
     const { t } = useTranslation();
     const [searchParams] = useSearchParams();
-    const role = searchParams.get('role') || 'worker';
+    const initialRole = searchParams.get('role') || 'worker';
+    const [role, setRole] = useState(initialRole);
     const navigate = useNavigate();
 
     // Default auth modes based on role
     const isWorker = role === 'worker';
-    const [authMode, setAuthMode] = useState(role === 'worker' ? 'otp' : 'password');
+    const [authMode, setAuthMode] = useState(initialRole === 'worker' ? 'otp' : 'password');
 
     // OTP Auth State
     const [identifier, setIdentifier] = useState('');
@@ -162,8 +163,23 @@ const Login = ({ setUser }) => {
                     <div className={`p-6 ${isWorker ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-brand-500 to-brand-700'} relative overflow-hidden`}>
                         <div className="absolute inset-0 bg-white/10 pattern-dots" />
                         <h2 className="text-2xl font-bold text-white mb-4 relative z-10 text-center">
-                            {isWorker ? t('login_worker_portal', 'Worker Login') : t('login_employer_portal', 'Employer Login')}
+                            {isWorker ? t('login_worker_portal', 'Worker Area') : t('login_employer_portal', 'Employer Area')}
                         </h2>
+
+                        <div className="flex bg-black/20 p-1 rounded-xl relative z-10 mb-4">
+                            <button
+                                onClick={() => { setRole('worker'); setAuthMode('otp'); }}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${role === 'worker' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/70 hover:bg-white/10'}`}
+                            >
+                                I am a Worker
+                            </button>
+                            <button
+                                onClick={() => { setRole('employer'); setAuthMode('password'); }}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${role === 'employer' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/70 hover:bg-white/10'}`}
+                            >
+                                I am an Employer
+                            </button>
+                        </div>
 
                         <div className="flex bg-black/20 p-1 rounded-xl relative z-10">
                             <button

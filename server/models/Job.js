@@ -18,6 +18,11 @@ const jobSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    payType: {
+        type: String,
+        enum: ['Hourly', 'Daily', 'Fixed'],
+        default: 'Daily',
+    },
     duration: {
         type: String, // e.g., '2 days', '1 week'
         required: true,

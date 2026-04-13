@@ -25,7 +25,8 @@ const ProfileSetup = ({ user, onSave }) => {
         email: user?.email || '',
         city: user?.location?.city || 'New Delhi',
         skills: user?.skills || [],
-        baseRate: user?.baseRate || '',
+        hourlyRate: user?.hourlyRate || '',
+        dailyRate: user?.dailyRate || '',
         companyName: user?.companyName || '',
     });
     const [loading, setLoading] = useState(false);
@@ -63,7 +64,8 @@ const ProfileSetup = ({ user, onSave }) => {
                 ...(form.email ? { email: form.email.trim() } : {}),
                 ...(isWorker ? {
                     skills: form.skills,
-                    baseRate: parseFloat(form.baseRate) || 0,
+                    hourlyRate: parseFloat(form.hourlyRate) || 0,
+                    dailyRate: parseFloat(form.dailyRate) || 0,
                 } : {
                     companyName: form.companyName.trim(),
                 })
@@ -193,22 +195,40 @@ const ProfileSetup = ({ user, onSave }) => {
                                 </div>
                             )}
 
-                            {/* Worker: Base Rate */}
+                            {/* Worker: Rates */}
                             {isWorker && (
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">
-                                        Daily Rate (₹) <span className="text-slate-400 normal-case font-normal">(optional)</span>
-                                    </label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                                        <input
-                                            type="number"
-                                            placeholder="500"
-                                            min="100"
-                                            className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition font-medium text-slate-900"
-                                            value={form.baseRate}
-                                            onChange={e => setForm({ ...form, baseRate: e.target.value })}
-                                        />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">
+                                            Daily Rate (₹)
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                                            <input
+                                                type="number"
+                                                placeholder="e.g. 500"
+                                                min="0"
+                                                className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition font-medium text-slate-900"
+                                                value={form.dailyRate}
+                                                onChange={e => setForm({ ...form, dailyRate: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">
+                                            Hourly Rate (₹)
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                                            <input
+                                                type="number"
+                                                placeholder="e.g. 100"
+                                                min="0"
+                                                className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition font-medium text-slate-900"
+                                                value={form.hourlyRate}
+                                                onChange={e => setForm({ ...form, hourlyRate: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             )}

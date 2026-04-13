@@ -210,7 +210,7 @@ exports.updateProfile = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized.' });
         }
 
-        const { name, location, skills, baseRate, companyName, isAvailable, email } = req.body;
+        const { name, location, skills, hourlyRate, dailyRate, companyName, isAvailable, email } = req.body;
 
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
@@ -230,7 +230,8 @@ exports.updateProfile = async (req, res) => {
 
         if (user.role === 'worker') {
             if (skills !== undefined) user.skills = skills;
-            if (baseRate !== undefined) user.baseRate = baseRate;
+            if (hourlyRate !== undefined) user.hourlyRate = hourlyRate;
+            if (dailyRate !== undefined) user.dailyRate = dailyRate;
             if (isAvailable !== undefined) user.isAvailable = isAvailable;
         }
         if (user.role === 'employer') {
