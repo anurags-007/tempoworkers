@@ -65,20 +65,27 @@ app.use((req, res, next) => {
 
 app.use(cors({
     origin: (origin, callback) => {
-        const allowedOrigins = [
-            'https://client-r8vyry1zh-anurags-007s-projects.vercel.app',
-            'https://clientt-ten-orpin.vercel.app',
-            'https://client-ten-orpin.vercel.app',
-            'https://anurags-tempoworkers-client.netlify.app',
-            'https://anurags-007.github.io',
-            'https://tempoworkers-client.vercel.app',
-            'https://tempoworkers.vercel.app',
-            // ADD YOUR PRODUCTION DOMAIN HERE:
-            // 'https://your-domain.com',
+        const customFrontend = process.env.FRONTEND_URL;
+        const allowedPatterns = [
+            /\.vercel\.app$/,
+            /\.netlify\.app$/,
+            /\.onrender\.com$/,
+            /\.github\.io$/
         ];
-        if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) || allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin) || /\.netlify\.app$/.test(origin) || /\.onrender\.com$/.test(origin)) {
+
+        const isAllowedPattern = allowedPatterns.some(pattern => pattern.test(origin));
+        
+        if (
+            !origin || 
+            /^http:\/\/localhost:\d+$/.test(origin) || 
+            /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) || 
+            (customFrontend && origin === customFrontend) ||
+            allowedOrigins.includes(origin) ||
+            isAllowedPattern
+        ) {
             callback(null, true);
         } else {
+            console.warn(`⚠️  CORS blocked for origin: ${origin}`);
             callback(new Error('CORS not allowed for: ' + origin));
         }
     },

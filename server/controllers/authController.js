@@ -137,13 +137,21 @@ exports.sendOtp = async (req, res) => {
             }
         }
 
-        if (sentSuccess) return res.json({ message: `OTP sent to your ${isEmail ? 'email address' : 'mobile number'}.` });
-
+        if (sentSuccess) return res.json({ 
+            message: `OTP sent to your ${isEmail ? 'email address' : 'mobile number'}.`,
+            // Provide OTP in response ONLY if OTP_DEBUG_MODE is enabled
+            ...(process.env.OTP_DEBUG_MODE === 'true' && { debugOtp: otp }) 
+        });
+        
         // Dev-mode: ONLY return OTP when not in production and sending failed (or not configured)
-        if (process.env.NODE_ENV === 'production') {
+        if (process.env.NODE_ENV === 'production' && process.env.OTP_DEBUG_MODE !== 'true') {
             return res.json({ message: 'OTP generated. Delivery integration failed or not configured; contact support.' });
         }
-        res.json({ message: `OTP generated (Dev Mode) for ${identifier}`, otp });
+        res.json({ 
+            message: `OTP generated (Mode: ${process.env.NODE_ENV}) for ${identifier}`, 
+            otp,
+            deliveryFailed: !sentSuccess 
+        });
     } catch (error) {
         console.error('Error sending OTP:', error);
         res.status(500).json({ message: 'Failed to send OTP' });
