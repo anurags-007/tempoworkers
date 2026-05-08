@@ -5,7 +5,7 @@ import {
     LogOut, MapPin, Clock, Search, CheckCircle, XCircle, Briefcase,
     RefreshCw, Bookmark, BookmarkCheck, Filter, X, User, Star, History, Trophy, MessageSquare
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast, Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';

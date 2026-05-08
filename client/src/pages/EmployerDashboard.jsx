@@ -4,7 +4,7 @@ import {
     LogOut, MapPin, Users, Plus, CheckCircle, Clock, X, ArrowLeft,
     Briefcase, Building2, Star, Trophy, History, MessageSquare, Lock
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ChatBox from '../components/ChatBox';
 import { toast, Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';

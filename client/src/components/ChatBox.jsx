@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, User, Loader2 } from 'lucide-react';
 import api from '../api';
 import GlassCard from './ui/GlassCard';

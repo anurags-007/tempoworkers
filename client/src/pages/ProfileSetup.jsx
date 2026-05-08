@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import React, { useState } from 'react';
 
 import { toast, Toaster } from 'react-hot-toast';

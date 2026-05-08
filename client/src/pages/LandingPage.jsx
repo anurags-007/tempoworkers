@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { HardHat, Briefcase, ArrowRight, Star } from 'lucide-react';
