@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { X, Send, User, Loader2 } from 'lucide-react';
 import api from '../api';
 import GlassCard from './ui/GlassCard';
@@ -25,6 +25,7 @@ const ChatBox = ({ application, currentUser, onClose }) => {
         
         window.addEventListener('tw-chat-message', handleNewMessage);
         return () => window.removeEventListener('tw-chat-message', handleNewMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [application._id]);
 
     useEffect(() => {

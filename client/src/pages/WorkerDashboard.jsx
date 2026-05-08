@@ -5,7 +5,7 @@ import {
     LogOut, MapPin, Clock, Search, CheckCircle, XCircle, Briefcase,
     RefreshCw, Bookmark, BookmarkCheck, Filter, X, User, Star, History, Trophy, MessageSquare
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { toast, Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
@@ -53,7 +53,7 @@ const StarDisplay = ({ value, max = 5 }) => (
     </div>
 );
 
-const WorkerDashboard = ({ user, setUser, onLogout }) => {
+const WorkerDashboard = ({ user, onLogout }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('jobs');
@@ -80,6 +80,7 @@ const WorkerDashboard = ({ user, setUser, onLogout }) => {
         else if (activeTab === 'applications') fetchApplications();
         else if (activeTab === 'bookmarks') fetchBookmarks();
         else if (activeTab === 'history') fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
     const fetchJobs = async (forceCity = null) => {

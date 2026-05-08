@@ -4,7 +4,7 @@ import {
     LogOut, MapPin, Users, Plus, CheckCircle, Clock, X, ArrowLeft,
     Briefcase, Building2, Star, Trophy, History, MessageSquare, Lock
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import ChatBox from '../components/ChatBox';
 import { toast, Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -93,7 +93,7 @@ const StarRating = ({ onRate }) => {
     );
 };
 
-const EmployerDashboard = ({ user, setUser, onLogout }) => {
+const EmployerDashboard = ({ user, onLogout }) => {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('post');
     const [myJobs, setMyJobs] = useState([]);
@@ -132,6 +132,7 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
     useEffect(() => {
         if (activeTab === 'jobs') fetchMyJobs();
         else if (activeTab === 'history') fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
     // Listen for Socket.IO notifications to show badge on employer dashboard
@@ -229,7 +230,7 @@ const EmployerDashboard = ({ user, setUser, onLogout }) => {
             try {
                 await api.post(`/payment/release/${appId}`);
                 toast.success('Escrow released and Job complete! 💸');
-            } catch (err) {
+            } catch {
                 toast.success('Job Marked Complete! ✅'); // Fallback for non-escrow jobs
             }
             

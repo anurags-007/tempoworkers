@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+
 
 const GradientButton = ({ children, onClick, className = '', icon: Icon, fullWidth = false }) => {
     return (

@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { HardHat, Briefcase, ArrowRight, Star } from 'lucide-react';
-import { motion } from 'framer-motion';
+
 import { useTranslation, Trans } from 'react-i18next';
 import Navbar from '../components/Navbar';
 import GlassCard from '../components/ui/GlassCard';
@@ -16,6 +16,7 @@ const LandingPage = () => {
     useEffect(() => {
         try {
             const stored = localStorage.getItem('user');
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setUser(stored ? JSON.parse(stored) : null);
         } catch {
             setUser(null);

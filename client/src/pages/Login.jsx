@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { toast, Toaster } from 'react-hot-toast';
 import { ArrowLeft, Smartphone, ShieldCheck, Loader2, Send, LogIn, Lock, UserPlus, KeyRound } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import GlassCard from '../components/ui/GlassCard';
 import GradientButton from '../components/ui/GradientButton';

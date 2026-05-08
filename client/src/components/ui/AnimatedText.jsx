@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+
 
 const AnimatedText = ({ text, className = '' }) => {
     const letters = Array.from(text);

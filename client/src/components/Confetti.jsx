@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import ReactConfetti from 'react-confetti';
-import { useWindowSize } from 'react-use'; // Optional, but usually good for confetti. 
 // Actually, react-confetti handles window resize automatically if width/height not provided, 
 // but it's better to provide it to avoid scrollbar issues.
 // Let's implement a simple version that covers the screen.
@@ -11,6 +10,7 @@ const Confetti = ({ trigger }) => {
 
     useEffect(() => {
         if (trigger) {
+            // eslint-disable-next-line
             setShow(true);
             setRecycle(true);
             // Stop recycling after 5 seconds, keep falling until gone

@@ -28,7 +28,7 @@ const AdminDashboard = () => {
             setStats(statsRes.data);
             setUsers(usersRes.data);
             setJobs(jobsRes.data);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load admin data');
         } finally {
             setLoading(false);
@@ -41,7 +41,7 @@ const AdminDashboard = () => {
             await api.delete(`/admin/users/${userId}`);
             toast.success('User deleted');
             setUsers(users.filter(u => u._id !== userId));
-        } catch (e) {
+        } catch {
             toast.error('Deletion failed');
         }
     };
@@ -52,7 +52,7 @@ const AdminDashboard = () => {
             await api.delete(`/admin/jobs/${jobId}`);
             toast.success('Job removed');
             setJobs(jobs.filter(j => j._id !== jobId));
-        } catch (e) {
+        } catch {
             toast.error('Deletion failed');
         }
     };
@@ -201,7 +201,7 @@ const AdminDashboard = () => {
     );
 };
 
-const StatCard = ({ title, value, icon, color }) => (
+const StatCard = ({ title, value, icon }) => (
     <GlassCard className={`!p-6 border-slate-100 text-slate-900`}>
         <div className="flex justify-between items-start mb-4">
             <div className={`p-3 rounded-xl bg-slate-100 text-brand-600 shadow-sm`}>

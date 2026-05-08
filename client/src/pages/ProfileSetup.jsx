@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+
 import { toast, Toaster } from 'react-hot-toast';
 import { User, Briefcase, MapPin, Star, Plus, X, CheckCircle, ArrowRight } from 'lucide-react';
 import api from '../api';
