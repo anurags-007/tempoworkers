@@ -28,6 +28,7 @@ const CITY_COORDS = {
     'Ahmedabad': [72.5714, 23.0225],
     'Jaipur': [75.7873, 26.9124],
     'Surat': [72.8311, 21.1702],
+    'Gorakhpur': [83.3732, 26.7606],
 };
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };

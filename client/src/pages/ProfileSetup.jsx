@@ -9,7 +9,7 @@ import GradientButton from '../components/ui/GradientButton';
 import Logo from '../components/Logo';
 
 const SKILLS = ['Mason', 'Plumber', 'Electrician', 'Laborer', 'Carpenter', 'Painter', 'Welder', 'Helper', 'Driver', 'Cook'];
-const CITIES = ['New Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Hyderabad', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Surat'];
+const CITIES = ['New Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Hyderabad', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Surat', 'Gorakhpur'];
 
 const CITY_COORDS = {
     'New Delhi': [77.2090, 28.6139], 'Mumbai': [72.8777, 19.0760],
@@ -17,6 +17,7 @@ const CITY_COORDS = {
     'Hyderabad': [78.4867, 17.3850], 'Kolkata': [88.3639, 22.5726],
     'Pune': [73.8567, 18.5204], 'Ahmedabad': [72.5714, 23.0225],
     'Jaipur': [75.7873, 26.9124], 'Surat': [72.8311, 21.1702],
+    'Gorakhpur': [83.3732, 26.7606],
 };
 
 const ProfileSetup = ({ user, onSave }) => {
