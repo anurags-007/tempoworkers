@@ -32,7 +32,7 @@ exports.createOrder = async (req, res) => {
         // Amount in paise (multiply by 100)
         let amount = application.job.wage;
         // Check if the worker has a base rate, we use job wage for now unless negotiated. Using Job Wage.
-        const amountInPaise = amount * 100;
+        const amountInPaise = Math.round(amount * 100);
 
         const razorpay = getRazorpayInstance();
 
@@ -145,7 +145,7 @@ exports.releaseEscrow = async (req, res) => {
         try {
             const razorpay = getRazorpayInstance();
             // Amount is in paise
-            const amountInPaise = payment.amount * 100;
+            const amountInPaise = Math.round(payment.amount * 100);
 
             const transfer = await razorpay.transfers.create({
                 account: worker.razorpayAccountId,
