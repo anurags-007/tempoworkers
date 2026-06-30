@@ -29,7 +29,7 @@ exports.getJobApplicants = async (req, res) => {
         }
 
         const applications = await Application.find({ job: req.params.jobId })
-            .populate('worker', 'name mobile email skills baseRate ratings avatarUrl isAvailable')
+            .populate('worker', 'name mobile email skills dailyRate hourlyRate ratings avatarUrl isAvailable')
             .sort({ createdAt: -1 });
         res.json(applications);
     } catch (err) {
@@ -90,7 +90,7 @@ exports.getEmployerHistory = async (req, res) => {
             job: { $in: jobIds },
             status: 'completed'
         })
-            .populate('worker', 'name mobile skills baseRate ratings avatarUrl')
+            .populate('worker', 'name mobile skills dailyRate hourlyRate ratings avatarUrl')
             .populate('job', 'title wage category duration')
             .sort({ completedAt: -1 });
         res.json(applications);

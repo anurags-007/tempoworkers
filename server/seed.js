@@ -5,10 +5,10 @@ const Job = require('./models/Job');
 const connectDB = require('./config/db');
 
 dotenv.config();
-connectDB();
 
 const seedData = async () => {
     try {
+        await connectDB();
         await User.deleteMany();
         await Job.deleteMany();
 
@@ -24,7 +24,8 @@ const seedData = async () => {
             mobile: '8888888888',
             role: 'worker',
             skills: ['Mason', 'Plumber'],
-            baseRate: 500,
+            dailyRate: 500,
+            hourlyRate: 100,
             location: { type: 'Point', coordinates: [77.2000, 28.6100] } // Nearby
         });
 

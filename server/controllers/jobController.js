@@ -246,7 +246,7 @@ exports.getJobApplicants = async (req, res) => {
         }
 
         const applications = await Application.find({ job: jobId })
-            .populate('worker', 'name mobile skills baseRate ratings avatarUrl')
+            .populate('worker', 'name mobile skills dailyRate hourlyRate ratings avatarUrl')
             .populate('job', 'title');
         res.json(applications);
     } catch (error) {

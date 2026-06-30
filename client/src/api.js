@@ -31,7 +31,7 @@ api.interceptors.response.use(
             // Token expired or invalid — clear storage and reload to force login
             localStorage.removeItem('user');
             localStorage.removeItem('token');
-            window.location.href = '/login';
+            window.location.hash = '/login';
         }
         return Promise.reject(error);
     }

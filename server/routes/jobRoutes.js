@@ -5,11 +5,12 @@ const {
     applyForJob, getJobApplicants,
     toggleJobStatus, toggleBookmark, getBookmarkedJobs
 } = require('../controllers/jobController');
-const { protect } = require('../middleware/auth');
+const { protect, optionalProtect } = require('../middleware/auth');
 
 router.post('/', protect, createJob);
-router.get('/', getJobs);                                        // Public — optionally enriched if JWT provided
+router.get('/', optionalProtect, getJobs);                                        // Public — optionally enriched if JWT provided
 router.get('/bookmarked', protect, getBookmarkedJobs);           // Worker's saved jobs
+
 router.get('/employer/:employerId', protect, getMyJobs);   // Employer: own jobs only
 router.post('/apply', protect, applyForJob);
 router.get('/:jobId/applicants', protect, getJobApplicants);

@@ -69,4 +69,26 @@ const requireRole = (...roles) => (req, res, next) => {
     next();
 };
 
-module.exports = { protect, requireRole, generateToken };
+/**
+ * Optional protect middleware — attaches req.user if valid token provided, otherwise proceeds silently as guest
+ */
+const optionalProtect = async (req, res, next) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, JWT_SECRET);
+
+            const user = await User.findById(decoded.id).select('-password');
+            if (user && decoded.tokenVersion === user.tokenVersion) {
+                req.user = user;
+            }
+        }
+    } catch (err) {
+        // Proceed silently if invalid or expired token
+    }
+    next();
+};
+
+module.exports = { protect, requireRole, generateToken, optionalProtect };
+
