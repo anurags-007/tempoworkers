@@ -29,6 +29,13 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ message: 'Application must be pending to initiate escrow' });
         }
 
+        // Prevent duplicate escrow orders for the same application
+        const existingEscrow = await Payment.findOne({ application: applicationId, status: 'escrow' });
+        if (existingEscrow) {
+            return res.status(400).json({ message: 'Escrow payment already active for this application.' });
+        }
+        await Payment.deleteMany({ application: applicationId, status: 'created' });
+
         // Amount in paise (multiply by 100)
         let amount = application.job.wage;
         // Check if the worker has a base rate, we use job wage for now unless negotiated. Using Job Wage.

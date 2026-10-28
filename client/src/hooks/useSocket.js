@@ -15,10 +15,12 @@ const useSocket = (user) => {
     const socketRef = useRef(null);
 
     useEffect(() => {
-        if (!user?._id) return;
+        const token = localStorage.getItem('token');
+        if (!user?._id || !token) return;
 
         const socket = io(SOCKET_URL, {
             transports: ['websocket'],
+            auth: { token },
             reconnectionAttempts: 5,
         });
 

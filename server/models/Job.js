@@ -9,10 +9,12 @@ const jobSchema = new mongoose.Schema({
     title: {
         type: String,
         required: true,
+        maxlength: 120,
     },
     category: {
         type: String,
-        required: true, // e.g., 'Plumber', 'Construction'
+        required: true,
+        maxlength: 60,
     },
     wage: {
         type: Number,

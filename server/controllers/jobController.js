@@ -21,7 +21,43 @@ exports.createJob = async (req, res) => {
         if (!title || !category || !wage || !duration || !location) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
-        const job = new Job({ title, category, wage, payType: payType || 'Daily', duration, employer: employerId, location });
+
+        const safeTitle = typeof title === 'string' ? title.replace(/<[^>]*>/g, '').trim().slice(0, 120) : '';
+        const safeCategory = typeof category === 'string' ? category.replace(/<[^>]*>/g, '').trim().slice(0, 50) : '';
+        const safeDuration = typeof duration === 'string' ? duration.replace(/<[^>]*>/g, '').trim().slice(0, 50) : '';
+        const numericWage = Number(wage);
+
+        if (!safeTitle || !safeCategory || !safeDuration || isNaN(numericWage) || numericWage <= 0) {
+            return res.status(400).json({ message: 'Valid title, category, duration, and positive wage are required.' });
+        }
+
+        const validPayTypes = ['Hourly', 'Daily', 'Fixed'];
+        const chosenPayType = validPayTypes.includes(payType) ? payType : 'Daily';
+
+        // Validate GeoJSON location coordinates
+        if (!location || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+            return res.status(400).json({ message: 'Valid location coordinates [longitude, latitude] are required.' });
+        }
+        const [lng, lat] = location.coordinates.map(Number);
+        if (isNaN(lng) || isNaN(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+            return res.status(400).json({ message: 'Coordinates must be valid numbers: longitude between -180 and 180, latitude between -90 and 90.' });
+        }
+
+        const safeLocation = {
+            type: 'Point',
+            coordinates: [lng, lat],
+            address: typeof location.address === 'string' ? location.address.replace(/<[^>]*>/g, '').trim().slice(0, 200) : ''
+        };
+
+        const job = new Job({ 
+            title: safeTitle, 
+            category: safeCategory, 
+            wage: numericWage, 
+            payType: chosenPayType, 
+            duration: safeDuration, 
+            employer: employerId, 
+            location: safeLocation 
+        });
         await job.save();
 
         await User.findByIdAndUpdate(employerId, { $inc: { jobsPosted: 1 } });
@@ -31,7 +67,7 @@ exports.createJob = async (req, res) => {
             io.emit('notification', {
                 type: 'job_posted',
                 title: '🏢 New Job Posted!',
-                message: `A new ${category} role is available! (${title})`,
+                message: `A new ${safeCategory} role is available! (${safeTitle})`,
                 jobId: job._id,
                 timestamp: new Date(),
             });
@@ -65,7 +101,12 @@ exports.getJobs = async (req, res) => {
             const parsedLat = parseFloat(lat);
             const parsedLng = parseFloat(lng);
             const parsedRadius = parseFloat(radius);
-            if (!isNaN(parsedLat) && !isNaN(parsedLng) && !isNaN(parsedRadius)) {
+            if (
+                !isNaN(parsedLat) && !isNaN(parsedLng) && !isNaN(parsedRadius) &&
+                parsedLat >= -90 && parsedLat <= 90 &&
+                parsedLng >= -180 && parsedLng <= 180 &&
+                parsedRadius > 0 && parsedRadius <= 500
+            ) {
                 query.location = {
                     $near: {
                         $geometry: { type: 'Point', coordinates: [parsedLng, parsedLat] },
@@ -75,21 +116,27 @@ exports.getJobs = async (req, res) => {
             }
         }
 
-        if (category && category !== 'All') query.category = category;
+        if (category && category !== 'All' && typeof category === 'string') {
+            query.category = category.slice(0, 50);
+        }
 
         if (minWage || maxWage) {
             query.wage = {};
-            if (minWage) query.wage.$gte = parseFloat(minWage);
-            if (maxWage) query.wage.$lte = parseFloat(maxWage);
+            const parsedMin = parseFloat(minWage);
+            const parsedMax = parseFloat(maxWage);
+            if (!isNaN(parsedMin) && parsedMin >= 0) query.wage.$gte = parsedMin;
+            if (!isNaN(parsedMax) && parsedMax >= 0) query.wage.$lte = parsedMax;
         }
 
-        if (search) {
-            const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (search && typeof search === 'string') {
+            const trimmedSearch = search.trim().slice(0, 80);
+            const escapedSearch = trimmedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             query.title = { $regex: escapedSearch, $options: 'i' };
         }
 
+        // SECURITY: Protect employer PII by only populating name and companyName publicly
         const jobs = await Job.find(query)
-            .populate('employer', 'name email mobile companyName')
+            .populate('employer', 'name companyName')
             .sort({ createdAt: -1 });
 
         let result = jobs;
@@ -202,6 +249,17 @@ exports.applyForJob = async (req, res) => {
         // SECURITY: always use JWT-authenticated user
         const workerId = req.user._id;
 
+        const job = await Job.findById(jobId).populate('employer', 'name');
+        if (!job) {
+            return res.status(404).json({ message: 'Job not found' });
+        }
+        if (job.status !== 'open') {
+            return res.status(400).json({ message: 'This job is no longer accepting applications.' });
+        }
+        if (job.employer && job.employer._id.toString() === workerId.toString()) {
+            return res.status(400).json({ message: 'Employers cannot apply to their own jobs.' });
+        }
+
         const existing = await Application.findOne({ job: jobId, worker: workerId });
         if (existing) {
             return res.status(400).json({ message: 'You have already applied for this job' });
@@ -211,7 +269,6 @@ exports.applyForJob = async (req, res) => {
 
         // ─── Notify Employer via Socket.IO ───
         const io = req.app.get('io');
-        const job = await Job.findById(jobId).populate('employer', 'name');
         if (io && job?.employer) {
             const employerId = job.employer._id.toString();
             const worker = await User.findById(workerId, 'name mobile');

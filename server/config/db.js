@@ -17,6 +17,7 @@ const connectDB = async () => {
                 console.warn('⚠️ Local MongoDB service not available. Booting fallback Memory MongoDB...');
                 const { MongoMemoryServer } = require('mongodb-memory-server');
                 const mongoServer = await MongoMemoryServer.create();
+                global.__MONGO_MEMORY_SERVER__ = mongoServer;
                 const uri = mongoServer.getUri();
                 await mongoose.connect(uri);
                 console.log(`✅ In-Memory MongoDB Connected at ${uri}`);

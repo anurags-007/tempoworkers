@@ -42,7 +42,14 @@ exports.deleteUser = async (req, res) => {
             return res.status(403).json({ message: 'Cannot delete an administrator account' });
         }
         await User.findByIdAndDelete(userId);
-        res.json({ message: 'User removed successfully' });
+        // Cascade cleanup to maintain relational integrity
+        const Application = require('../models/Application');
+        const Job = require('../models/Job');
+        const Message = require('../models/Message');
+        await Application.deleteMany({ worker: userId });
+        await Job.deleteMany({ employer: userId });
+        await Message.deleteMany({ sender: userId });
+        res.json({ message: 'User and all related records removed successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

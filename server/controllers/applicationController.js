@@ -201,16 +201,15 @@ exports.rateWorker = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to rate this worker.' });
         }
 
-        if (!['accepted', 'completed'].includes(application.status)) {
-            return res.status(400).json({ message: 'Can only rate accepted or completed applications' });
+        if (application.status !== 'completed') {
+            return res.status(400).json({ message: 'Can only rate workers on completed applications' });
         }
 
         const worker = await User.findById(application.worker);
         if (!worker) return res.status(404).json({ message: 'Worker not found' });
 
-        const alreadyRated = worker.ratings?.some(r => r.from?.toString() === raterId.toString());
-        if (alreadyRated) {
-            return res.status(400).json({ message: 'You have already rated this worker' });
+        if (application.isRated) {
+            return res.status(400).json({ message: 'You have already submitted a rating for this application.' });
         }
 
         const safeComment = typeof comment === 'string'

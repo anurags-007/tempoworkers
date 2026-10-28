@@ -70,4 +70,8 @@ const Employer = User.discriminator('employer', new mongoose.Schema({
     jobsPosted: { type: Number, default: 0 },
 }));
 
-module.exports = { User, Worker, Employer };
+const Admin = User.discriminator('admin', new mongoose.Schema({
+    department: { type: String, default: 'SuperAdmin' },
+}));
+
+module.exports = { User, Worker, Employer, Admin };

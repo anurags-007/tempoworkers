@@ -31,7 +31,7 @@ const getRedisClient = () => {
 };
 
 const redisClient = getRedisClient();
-const pubClient = getRedisClient(); // For Socket.io adapter
+const pubClient = redisClient ? redisClient.duplicate() : null; // For Socket.io adapter
 const subClient = pubClient ? pubClient.duplicate() : null; // For Socket.io adapter
 
 module.exports = { redisClient, pubClient, subClient };
