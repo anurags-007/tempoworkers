@@ -70,20 +70,41 @@ exports.verifyPayment = async (req, res) => {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, applicationId } = req.body;
         const employerId = req.user._id;
 
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return res.status(400).json({ message: 'Missing payment verification parameters.' });
+        }
+
         // SECURITY FIX: Bind payment to the authenticated employer (IDOR Protection)
         const payment = await Payment.findOne({ razorpay_order_id, employer: employerId });
         if (!payment) {
             return res.status(404).json({ message: 'Payment record not found for this employer.' });
         }
 
-        const bodyText = razorpay_order_id + "|" + razorpay_payment_id;
+        // Idempotency: If already in escrow, return success safely
+        if (payment.status === 'escrow') {
+            return res.json({ message: 'Payment verified successfully, funds are in escrow! Job Accepted.' });
+        }
+
+        if (!process.env.RAZORPAY_KEY_SECRET) {
+            return res.status(500).json({ message: 'Server payment configuration missing.' });
+        }
+
+        const bodyText = `${razorpay_order_id}|${razorpay_payment_id}`;
         
         const expectedSignature = crypto
             .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-            .update(bodyText.toString())
+            .update(bodyText)
             .digest('hex');
 
-        if (expectedSignature === razorpay_signature) {
+        // Constant-time signature comparison to eliminate timing side-channel attacks
+        const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+        const signatureBuffer = Buffer.from(razorpay_signature, 'hex');
+
+        const isSignatureValid = 
+            expectedBuffer.length === signatureBuffer.length && 
+            crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
+
+        if (isSignatureValid) {
             // Payment is verified
             payment.razorpay_payment_id = razorpay_payment_id;
             payment.razorpay_signature = razorpay_signature;
@@ -129,15 +150,21 @@ exports.releaseEscrow = async (req, res) => {
             return res.status(400).json({ message: 'No funds in escrow for this application' });
         }
 
-        const payment = await Payment.findOne({ application: applicationId, status: 'escrow' });
-        if (!payment) return res.status(404).json({ message: 'Escrow payment record not found' });
+        // RACE CONDITION PREVENTION: Atomically transition status from 'escrow' to 'processing_release'
+        const payment = await Payment.findOneAndUpdate(
+            { application: applicationId, status: 'escrow' },
+            { status: 'processing_release' },
+            { new: true }
+        );
+        if (!payment) {
+            return res.status(409).json({ message: 'Escrow payment record not found or release is already being processed.' });
+        }
 
-        // ─── RAZORPAY ROUTE TRANSFER ───
-        // In production, we transfer the funds to the worker's Linked Account ID.
-        // The worker must have 'razorpayAccountId' set on their profile.
-        
         const worker = application.worker;
         if (!worker.razorpayAccountId) {
+            // Revert state back to escrow so the worker can link their account and retry
+            payment.status = 'escrow';
+            await payment.save();
             return res.status(400).json({ 
                 message: 'Worker has not linked their bank account (razorpayAccountId missing). Funds remain in escrow.' 
             });
@@ -170,6 +197,10 @@ exports.releaseEscrow = async (req, res) => {
             res.json({ message: 'Funds released and transferred to worker successfully! ✅', transferId: transfer.id });
         } catch (rzpError) {
             console.error('Razorpay Transfer API Error:', rzpError);
+            // Revert status to escrow so the employer can retry after resolving provider issues
+            payment.status = 'escrow';
+            await payment.save();
+
             return res.status(502).json({ 
                 message: 'Razorpay transfer failed. Please ensure your account has enough balance and the worker id is valid.',
                 error: rzpError.message

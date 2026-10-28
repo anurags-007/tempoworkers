@@ -1,5 +1,9 @@
 node_modules
 .env
+.env.*
+.env.local
+.env.production
+!.env.example
 dist
 build
 .DS_Store
@@ -7,3 +11,4 @@ coverage
 .vscode
 .idea
 *.log
+

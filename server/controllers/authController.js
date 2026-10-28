@@ -137,19 +137,22 @@ exports.sendOtp = async (req, res) => {
             }
         }
 
-        if (sentSuccess) return res.json({ 
-            message: `OTP sent to your ${isEmail ? 'email address' : 'mobile number'}.`,
-            // Provide OTP in response ONLY if OTP_DEBUG_MODE is enabled
-            ...(process.env.OTP_DEBUG_MODE === 'true' && { debugOtp: otp }) 
-        });
+        const isDevDebug = process.env.NODE_ENV !== 'production' && process.env.OTP_DEBUG_MODE === 'true';
+
+        if (sentSuccess) {
+            return res.json({ 
+                message: `OTP sent to your ${isEmail ? 'email address' : 'mobile number'}.`,
+                ...(isDevDebug && { debugOtp: otp }) 
+            });
+        }
         
-        // Dev-mode: ONLY return OTP when not in production and sending failed (or not configured)
-        if (process.env.NODE_ENV === 'production' && process.env.OTP_DEBUG_MODE !== 'true') {
-            return res.json({ message: 'OTP generated. Delivery integration failed or not configured; contact support.' });
+        // In production, never return OTP in response under any circumstance
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(503).json({ message: 'OTP delivery service is unavailable. Please try again later or contact support.' });
         }
         res.json({ 
-            message: `OTP generated (Mode: ${process.env.NODE_ENV}) for ${identifier}`, 
-            otp,
+            message: `OTP generated (Mode: ${process.env.NODE_ENV || 'development'}) for ${identifier}`, 
+            ...(isDevDebug && { otp }),
             deliveryFailed: !sentSuccess 
         });
     } catch (error) {
@@ -166,7 +169,7 @@ exports.verifyOtp = async (req, res) => {
     if (!targetIdentifier || !otp) {
         return res.status(400).json({ message: 'Mobile number/Email and OTP are required.' });
     }
-    if (!/^\d{4}$/.test(otp)) {
+    if (typeof otp !== 'string' || !/^\d{4}$/.test(otp)) {
         return res.status(400).json({ message: 'OTP must be exactly 4 digits.' });
     }
 
@@ -174,7 +177,12 @@ exports.verifyOtp = async (req, res) => {
         const validOtp = await Otp.findOne({ identifier: targetIdentifier });
         if (!validOtp) return res.status(400).json({ message: 'No OTP requested or expired.' });
 
-        if (validOtp.otp !== otp) {
+        // Constant-time comparison to prevent timing side-channel attacks
+        const inputOtpBuffer = Buffer.from(String(otp));
+        const storedOtpBuffer = Buffer.from(String(validOtp.otp));
+        const isOtpMatch = inputOtpBuffer.length === storedOtpBuffer.length && crypto.timingSafeEqual(inputOtpBuffer, storedOtpBuffer);
+
+        if (!isOtpMatch) {
             validOtp.failedAttempts = (validOtp.failedAttempts || 0) + 1;
             if (validOtp.failedAttempts >= 5) {
                 await Otp.deleteOne({ _id: validOtp._id });
@@ -193,7 +201,10 @@ exports.verifyOtp = async (req, res) => {
         );
         
         if (!user) {
-            if (!role) return res.status(400).json({ message: 'Role required for new user' });
+            // SECURITY: Strictly restrict self-registration roles to worker or employer only
+            if (!role || !['worker', 'employer'].includes(role)) {
+                return res.status(400).json({ message: 'Valid role (worker or employer) is required for registration.' });
+            }
             if (isEmail) {
                 user = role === 'worker' ? new Worker({ email: targetIdentifier, role }) : new Employer({ email: targetIdentifier, role });
             } else {
@@ -232,18 +243,37 @@ exports.updateProfile = async (req, res) => {
                 user.location = location;
             }
         }
-        if (email !== undefined && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-             user.email = email;
+        if (email !== undefined && email !== user.email) {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                return res.status(400).json({ message: 'Invalid email format' });
+            }
+            const existingEmail = await User.findOne({ email, _id: { $ne: userId } });
+            if (existingEmail) {
+                return res.status(400).json({ message: 'Email is already in use by another account' });
+            }
+            user.email = email;
         }
 
         if (user.role === 'worker') {
-            if (skills !== undefined) user.skills = skills;
-            if (hourlyRate !== undefined) user.hourlyRate = hourlyRate;
-            if (dailyRate !== undefined) user.dailyRate = dailyRate;
-            if (isAvailable !== undefined) user.isAvailable = isAvailable;
+            if (Array.isArray(skills)) {
+                user.skills = skills
+                    .filter(s => typeof s === 'string')
+                    .map(s => s.replace(/<[^>]*>/g, '').trim().slice(0, 50));
+            }
+            if (hourlyRate !== undefined) {
+                const parsedHourly = Number(hourlyRate);
+                if (!isNaN(parsedHourly) && parsedHourly >= 0) user.hourlyRate = parsedHourly;
+            }
+            if (dailyRate !== undefined) {
+                const parsedDaily = Number(dailyRate);
+                if (!isNaN(parsedDaily) && parsedDaily >= 0) user.dailyRate = parsedDaily;
+            }
+            if (isAvailable !== undefined) user.isAvailable = Boolean(isAvailable);
         }
         if (user.role === 'employer') {
-            if (companyName !== undefined) user.companyName = companyName;
+            if (companyName !== undefined && typeof companyName === 'string') {
+                user.companyName = companyName.replace(/<[^>]*>/g, '').trim().slice(0, 100);
+            }
         }
 
         await user.save();

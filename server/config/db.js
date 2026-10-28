@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
     try {
         if (!process.env.MONGO_URI) {
+            if (process.env.NODE_ENV === 'production') {
+                console.error('❌ FATAL: MONGO_URI environment variable is required in production.');
+                process.exit(1);
+            }
             console.warn('⚠️ MONGO_URI is missing. Attempting connection to local MongoDB service...');
             try {
                 await mongoose.connect('mongodb://127.0.0.1:27017/tempoworkers', {

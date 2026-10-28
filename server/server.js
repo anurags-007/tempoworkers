@@ -121,6 +121,7 @@ app.use(rateLimit);
 const authRequestCounts = new Map();
 setInterval(() => authRequestCounts.clear(), 15 * 60 * 1000);
 const authRateLimit = (req, res, next) => {
+    if (process.env.NODE_ENV !== 'production') return next();
     const ip = req.ip;
     const count = (authRequestCounts.get(ip) || 0) + 1;
     authRequestCounts.set(ip, count);

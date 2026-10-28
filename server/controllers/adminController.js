@@ -11,10 +11,14 @@ exports.isAdmin = (req, res, next) => {
     }
 };
 
+const mongoose = require('mongoose');
+
 // ─── User Management ─────────────────────────────────────────
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find().sort({ createdAt: -1 });
+        const users = await User.find()
+            .select('-password -pushSubscriptions -tokenVersion')
+            .sort({ createdAt: -1 });
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -24,6 +28,19 @@ exports.getAllUsers = async (req, res) => {
 exports.deleteUser = async (req, res) => {
     try {
         const { userId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: 'Invalid User ID' });
+        }
+        if (req.user._id.toString() === userId) {
+            return res.status(400).json({ message: 'Cannot delete your own admin account' });
+        }
+        const targetUser = await User.findById(userId);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        if (targetUser.role === 'admin') {
+            return res.status(403).json({ message: 'Cannot delete an administrator account' });
+        }
         await User.findByIdAndDelete(userId);
         res.json({ message: 'User removed successfully' });
     } catch (error) {
@@ -34,7 +51,7 @@ exports.deleteUser = async (req, res) => {
 // ─── Job & Dispute Management ────────────────────────────────
 exports.getAllJobs = async (req, res) => {
     try {
-        const jobs = await Job.find().populate('employer', 'name email mobile').sort({ createdAt: -1 });
+        const jobs = await Job.find().populate('employer', 'name email companyName').sort({ createdAt: -1 });
         res.json(jobs);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -44,6 +61,9 @@ exports.getAllJobs = async (req, res) => {
 exports.deleteJob = async (req, res) => {
     try {
         const { jobId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(jobId)) {
+            return res.status(400).json({ message: 'Invalid Job ID' });
+        }
         await Job.findByIdAndDelete(jobId);
         // Also remove applications for this job
         await Application.deleteMany({ job: jobId });

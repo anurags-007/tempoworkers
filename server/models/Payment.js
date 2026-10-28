@@ -40,7 +40,7 @@ const paymentSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['created', 'escrow', 'failed', 'released'],
+        enum: ['created', 'escrow', 'failed', 'released', 'processing_release'],
         default: 'created',
     }
 }, { timestamps: true });
