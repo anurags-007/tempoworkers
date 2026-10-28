@@ -65,7 +65,7 @@ exports.sendMessage = async (req, res) => {
         const message = new Message({
             application: applicationId,
             sender: req.user._id,
-            text: text.slice(0, 500) // max 500 chars limit
+            text: text.replace(/<[^>]*>/g, '').trim().slice(0, 500) // max 500 chars limit
         });
         
         await message.save();

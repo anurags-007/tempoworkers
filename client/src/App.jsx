@@ -12,7 +12,14 @@ const EmployerDashboard = lazy(() => import("./pages/EmployerDashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 
 const App = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const navigate = useNavigate();
 
   // Initialize user from localStorage on mount

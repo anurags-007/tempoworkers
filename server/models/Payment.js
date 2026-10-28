@@ -34,6 +34,10 @@ const paymentSchema = new mongoose.Schema({
     razorpay_signature: {
         type: String,
     },
+    razorpay_transfer_id: {
+        type: String,
+        default: null,
+    },
     status: {
         type: String,
         enum: ['created', 'escrow', 'failed', 'released'],

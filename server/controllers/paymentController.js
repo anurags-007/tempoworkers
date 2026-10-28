@@ -91,7 +91,8 @@ exports.verifyPayment = async (req, res) => {
             await payment.save();
 
             // Mark application as accepted and paymentStatus as escrow
-            const application = await Application.findById(applicationId);
+            const application = await Application.findById(payment.application);
+            if (!application) return res.status(404).json({ message: 'Associated application not found.' });
             application.status = 'accepted';
             application.paymentStatus = 'escrow';
             await application.save();
